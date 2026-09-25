@@ -1,95 +1,92 @@
-# __TITLE__
+# Fitbit データ CSV 変換
 
-公開 URL: **https://yorozu-craft.com/__REPO__/**
+公開 URL: **https://yorozu-craft.com/fitbit-export/**
 
-__DESCRIPTION__
-yorozu-craft のツールの1つです（共通ルールは [youheioonuki.github.io の README](https://github.com/YouheiOonuki/youheioonuki.github.io) を参照）。
-
-<!-- TEMPLATE-BEGIN -->
-## テンプレートの使い方（`tools/init.mjs` を実行すると、この節は消えます）
-
-yorozu-craft の新しいツールの雛形です。サイト共通の決まり（youheioonuki.github.io の README「ツールを追加するとき」）のうち、ファイルで守れるものは最初から入れてあります。
-
-1. GitHub で「Use this template」→ リポジトリ名は短いローマ字＋種類（例: `loan-sim`）。URL になる
-2. クローンして、初期化スクリプトを 1 回だけ実行する（Node 20 以上）
-
-   ```sh
-   node tools/init.mjs loan-sim "住宅ローン 返済シミュレーター" "毎月の返済額と総返済額をすぐ計算。" --pwa
-   ```
-
-   - `__REPO__`・`__TITLE__`・`__DESCRIPTION__`・日付を置き換える
-   - `--pwa` を付けないと、オフライン対応の部分（`sw.js`・`manifest.webmanifest`・`PWA-BEGIN`〜`PWA-END`）を消す
-   - README のこの節と `tools/init.mjs` 自身を消す
-3. `node --test tests/*.test.js` が通ることを確かめてからコミット
-4. 残りは youheioonuki.github.io の README「ツールを追加するとき」の手順どおり（Pages の公開と Enforce HTTPS、トップの一覧・robots.txt・URL 表への追加など）
-
-最初から入っているもの:
-
-| 決まり | 入っている場所 |
-|-------|---------------|
-| canonical・OGP・AdSense・Cloudflare ビーコン | `index.html`・`guide.html` の `<head>` と `</body>` 直前 |
-| 共通ページへの相対リンク（`../about.html`・`../privacy-policy.html`） | 各ページのフッター |
-| ツール配下の 404 | `404.html`（youheioonuki.github.io のものと同じ） |
-| 保存キーの接頭辞 `<リポジトリ名>_`・try/catch | `main.js` の `store` |
-| 共有 URL は `#s=` | `main.js` の `toShareHash` / `fromShareHash` |
-| 保存内容を JSON ファイルに書き出し・読み込み（`{tool, version, exportedAt, data}`。読み込み時は `tool` を確かめ、正規化してから確認のうえ上書き） | `calc.js` の `backupFileName` / `buildBackup` / `parseBackup`、`main.js` の書き出し・読み込み、`index.html` のボタン、`tests/backup.test.js` |
-| SW のキャッシュ名の接頭辞・自分のパスだけ扱う・`./sw.js` で登録 | `sw.js`・`main.js` |
-| manifest の `id` は `/<リポジトリ名>/` | `manifest.webmanifest` |
-| 使い方ページは `guide.html`（注意・データの扱い・根拠と確認日・更新履歴の節つき） | `guide.html` |
-| 要望・不具合の報告フォーム（全ツール共通の Google フォーム。リポジトリ名が入った状態で開く） | `guide.html` の「ご利用上の注意・データの扱い」 |
-| 時点のある値は値・出典・確認日をセットで 1 か所に | `constants.js`（テストで出典と確認日の書き忘れを検出） |
-| 計算は画面から切り離した純粋関数＋テスト | `calc.js`・`tests/`・`.github/workflows/test.yml` |
-| 端末のフォント・ダークモード | `style.css` |
-| 画面の骨組み「入力 → 結果」（必須の入力 1 つの `fieldset` → 結果 → くわしく入れる `details` → 保存・書き出し → 使い方へのリンク） | `index.html`（各節にコメント） |
-| 上端の固定バー・`summary` の状態表示・PC の 2 カラム・印刷で広告と固定バーを消す | `screen.js`・`style.css` の「画面の骨組み」・`main.js` の `bar` |
-| MIT ライセンス | `LICENSE` |
-
-画面の部品の使い方（yorozu-plans の `docs/SCREEN.md`。youheioonuki.github.io の README「ツールを追加するとき」25）:
-
-- **必須の入力と結果**: `index.html` の `fieldset.card.req`（見出しは `legend`）の直後に `section.result-card`。大きな数字は `.result-big`、内訳は `details.rels`。入力と結果の間に段落や見出しを置かない
-- **くわしく入れる**: 1 グループ 1 つの `<details class="card opt" id="opt-…">`。`summary` の中に `<span class="opt-state">` を置き、計算のたびに `YorozuScreen.detailsSummary({ 'opt-…': '今の状態' })`。道具で任意の項目が無ければ `.opts` ごと消す
-- **固定バー**: `YorozuScreen.fixedBar({ bar, watch, jump, text })` の戻り値の `set('数字 1 つ')` を計算のたびに呼ぶ（空文字なら出さない）。結果が画面内にあれば出ない。印刷物では `watch` を印刷ボタンの行にし、バーの中身を `<button>`、`onClick` で印刷を呼ぶ
-- **PC の 2 カラム**（制度の計算機だけ）: `<main class="app-main layout-2col">` と、固定バーに `fixbar-narrow` を足す
-- **印刷**: `style.css` の `@media print` で固定バー・`.no-print`・広告（`ins.adsbygoogle` など）を消し、折りたたみの中は出す。印刷物のツールは用紙の CSS をこの下に足す
-- 公開前に yorozu-plans の `tools/ui/measure_fold.cjs`（位置）と `tools/writing/measure.py`（字数）で「要修正」が無いことを確かめる
-
-差し替えが必要なもの: `favicon.svg`・`apple-touch-icon.png`（180×180）・`og-image.png`（1200×630）は仮の絵なので、ツールに合わせて作り直す。
-<!-- TEMPLATE-END -->
+Fitbit（2026 年 5 月から Google Health）の書き出し（Google Takeout の zip）をブラウザの中で読み、睡眠・睡眠スコア・歩数・安静時心拍数・体重・運動を日ごとの CSV（Excel 用）と Markdown（Obsidian 用）にする。
+yorozu-craft のツールの1つです（共通ルールは [youheioonuki.github.io の README](https://github.com/YouheiOonuki/youheioonuki.github.io) を参照）。企画書は yorozu-plans の `docs/23_Fitbit書き出し変換.md`（K81）。
 
 ## 機能
 
-- （できることを箇条書きで）
-- 入力内容はこの端末のブラウザにだけ保存し、外部には送信しない
+- 書き出しの `.zip`（分割された複数の zip も一度に）、展開したフォルダ、個別の JSON・CSV を読む。ドロップも可
+- 結果の前に、日数・期間・項目ごとの日数・読めなかったファイル・直近 7 日の表を出す（アプリの値と見比べる用）
+- 出力: 日ごとの CSV（BOM あり/なし、列名 日本語/英語、期間）、運動の一覧の CSV、Markdown の zip（1 日 1 ファイルの frontmatter つき、または 1 か月 1 ファイルの表）
+- **ファイルは端末の外に出ない**: 送信・アップロード・API・トークンは使わない。ファイルも設定も localStorage に保存しない（健康の記録を端末に残さない）。オフライン対応（`sw.js`）なので、一度開けば機内モードでも動く
+- Garmin・Apple ヘルスケア・Strava の取り込み形式への変換はしない（MVP の外）
 
-## 計算の仕様・根拠
+## 読み方
 
-（計算式、使っている値と出典。値は `constants.js` にまとめ、画面の「根拠と確認日」にも出す）
+| 段 | どこ | 中身 |
+|---|---|---|
+| zip | `zip.js` | 末尾の中央ディレクトリだけ読み、要る項目だけ `Blob.slice` で取り出して `DecompressionStream('deflate-raw')` で展開。ZIP64 対応。zip 全体をメモリに載せない。心拍数の細かい記録（`heart_rate-*.json`、書き出しで最も大きい）は開かない |
+| 種類 | `calc.js` の `classify` | フォルダ名は見ず、ファイル名だけで決める（Takeout の `Fitbit/Global Export Data/`、旧アカウントアーカイブの `Sleep/`・`Physical Activity/`、フォルダ名が `Google Health` の場合のどれでも読めるように） |
+| 読む | `parseInto` | 時差に依らない形でためる。歩数は 15 分の区切りごとの合計だけ持つ（5 年分でも数十万件） |
+| まとめる | `aggregate` | タイムゾーンと体重の単位を当てて日ごとに。設定を変えたらここだけやり直す |
+| 出す | `toCsv`・`toMarkdownFiles`・`Zip.makeZip`（無圧縮） | CSV は CRLF。Markdown の frontmatter の文字列はすべて二重引用符 |
+
+zip の読み方にライブラリ（fflate など）を使わなかった理由: (1) Takeout の zip は 2〜50 GB になり、`unzipSync` のように全体を `ArrayBuffer` に読むとスマホで落ちる。(2) ストリームで頭から読む方式でも、使わない心拍数のファイル（数 GB）まで全部読むことになる。(3) 中央ディレクトリの読み取りは 100 行ほどで、第三者のコードを同梱・保守しなくて済む。展開はブラウザの標準機能（Chrome・Edge 103、Firefox 113、Safari 16.4 から）。
+
+### 読むファイルと扱い
+
+| ファイル（名前だけで判定） | 使う値 | 時刻・日付の扱い |
+|---|---|---|
+| `sleep-YYYY-MM-DD.json` | `dateOfSleep`・`startTime`・`endTime`・`minutesAsleep`・`minutesAwake`・`timeInBed`・`mainSleep`・`levels.summary` の deep/light/rem（`type: "stages"` のときだけ） | 現地の時刻のまま。`mainSleep` の最長をその日の睡眠、ほかは「ほかの睡眠」 |
+| `UserSleeps_*.csv` | `sleep_start`・`sleep_end`・`start_utc_offset`・`end_utc_offset`・`minutes_asleep`・`minutes_awake`・`minutes_in_sleep_period` | UTC に offset を足す。JSON の睡眠が無い日だけ使う。内訳は出さない |
+| `sleep_score.csv` | `sleep_log_entry_id`・`timestamp`・`overall_score` | ID が睡眠の `logId` と結べればその日、結べなければ timestamp の日付 |
+| `steps-YYYY-MM-DD.json` | `dateTime`（`MM/DD/YY HH:MM:SS`）・`value` | **UTC とみなして**選んだタイムゾーンで日付を分ける |
+| `steps_YYYY-MM-DD.csv` | `timestamp`・`steps` | 時差の書き（`Z` など）があれば UTC。JSON と同じ日があれば JSON を使い、食い違いを数えて内訳に出す |
+| `resting_heart_rate-YYYY-MM-DD.json` | `value.date`・`value.value` | 日付そのまま。0 と空は捨てる。整数に四捨五入 |
+| `daily_resting_heart_rate.csv` | `timestamp`・`beats per minute` | 日付の部分をそのまま。JSON が優先 |
+| `weight-YYYY-MM-DD.json` | `weight`・`bmi`・`fat`・`date`・`time` | **単位はポンドとみなす**。`weight.csv` と同じ日があれば比べて決める。画面で lb / kg を選べる |
+| `weight.csv` | `timestamp`・`weight grams` | 時差の書きがあれば UTC |
+| `exercise-N.json` | `activityName`・`startTime`・`originalStartTime`・`duration`・`activeDuration`・`steps`・`calories`・`averageHeartRate` | `originalStartTime` に時差の書きがあればその時刻、無ければ `startTime` を UTC とみなす |
+
+形式の出典（2026-09-25 確認。`constants.js` の `SOURCES` にも同じもの）:
+
+- 手順・期限（公式）: [Google Health ヘルプ 14236615](https://support.google.com/fitbit/answer/14236615?hl=ja)（Google アカウントなら Takeout で「Google Health」を選ぶ。Fitbit アカウントなら fitbit.com の設定 → データ エクスポート）、[14237024](https://support.google.com/googlehealth/answer/14237024?hl=ja)（2026-05-19 以降 Fitbit アカウントでログイン不可、2026-07-15 削除処理開始）、[Google アカウント ヘルプ 3024190](https://support.google.com/accounts/answer/3024190?hl=ja)（.zip / .tgz、上限を超えると分割、最大 50 GB、約 7 日で期限切れ）
+- 形式（公開の解析コード。Google は中身の列を説明していない）: [kev-m/FitOut](https://github.com/kev-m/FitOut)（sleep・resting_heart_rate・weight・exercise の JSON の例、`heart_rate_YYYY-MM-DD.csv` の `timestamp,beats per minute` と `...Z`）、[saubury/duckdb-fitbit](https://github.com/saubury/duckdb-fitbit)（steps・heart_rate の `MM/DD/YY HH:MM:SS` と、UTC+11 の人が +11 時間して集計、sleep の stages と classic の違い、exercise の `startTime` にも +11 時間）、[barfittc/Takeout.Fitbit.Parser](https://github.com/barfittc/Takeout.Fitbit.Parser)（`MM/dd/yy HH:mm:ss`）、[armixlabs/FitbitToGarminConverter](https://github.com/armixlabs/FitbitToGarminConverter)（`_GoogleData` の CSV の列名、UserSleeps、weight の lbs と `weight grams`、`sleep_score.csv` の列）、[joshgaus/FitBitDataAnalysis](https://github.com/joshgaus/FitBitDataAnalysis)（2026-08 の書き出しで `Physical Activity_GoogleData/daily_resting_heart_rate.csv`・`Sleep Score/sleep_score.csv` と JSON が並ぶ）
+
+## テスト
+
+`node --test tests/*.test.js`（CI は `.github/workflows/test.yml`）。
+
+- `tests/fixtures/takeout/` と `Calc.makeSample()`（画面の「見本で試す」）は**架空のデータ**。実在の人の記録ではない。上の表の形に合わせて手で作った（JSON と CSV の重なる日、classic の睡眠、昼寝、値 0 の心拍、ポンドとグラムの体重、UTC の日付またぎ、`originalStartTime` を含む）
+- `sleep_score.csv` の `sleep_log_entry_id`・`restlessness` の列名は、公開コード（armixlabs は `timestamp` ほか 6 列を名前で、joshgaus は列番号 1・2・6・8 で読む）と矛盾しない形にしただけで、実物では確かめていない
+- zip は Node の zlib で deflate した zip と ZIP64 の目次を組み立てて読む
 
 ## 保守
 
 | 時期 | 確認すること | 直す場所 |
 |------|------------|---------|
-| （例: 毎年4月ごろ） | （例: 料率の改定） | `constants.js`、`guide.html` の最終確認日 |
+| 半年ごと・問い合わせがあったとき | 書き出しのフォルダ・ファイル名・列名が変わっていないか（Google Health の改名後も形式が動いている）。公開の解析コードの更新も見る | `calc.js` の `KINDS`・`parseInto`、`constants.js` の `SOURCES` と `CHECKED`、`guide.html` の更新履歴 |
+| 確認日から 12 か月まで | 公式ヘルプの手順（Takeout の製品名「Google Health」） | `guide.html` の「エクスポートする方法」、`constants.js` |
 
-値や計算を直したら、`guide.html` の「更新履歴」に日付と内容を 1 行足す。
+## 開いた問い（実物の書き出しで確かめる）
+
+1. `steps-*.json`・`exercise-*.json` の時刻が UTC か（公開の解析の観察どおりか）。同じ書き出しに `steps_*.csv`（`Z` つき）があれば、画面の内訳の「食い違い」で確かめられる
+2. `weight-*.json` の単位がポンドか（表示の設定が kg でもか）
+3. 2026 年の書き出しの一番上のフォルダ名（`Fitbit` か `Google Health` か）と、`Global Export Data` がまだ全期間入るか。ファイル名で読むので、どちらでも動く
+4. `UserSleeps_*.csv`・`weight.csv`・`sleep_score.csv` の列名（1〜2 件の公開コードでしか確かめていない）
+5. `sleep_score.csv` の `timestamp` が起きた時刻か、UTC か現地か（ID で結べないときだけ効く）
+6. 書き出しの `.tgz` は読まない（展開したフォルダなら読める）
 
 ## ファイル
 
 | ファイル | 役割 |
 |---------|------|
-| `index.html` | ツール本体 |
-| `guide.html` | 使い方・根拠と確認日・よくある質問・ご利用上の注意・更新履歴 |
-| `calc.js` | 計算ロジック（画面から切り離した純粋関数） |
-| `constants.js` | 時点のある値（値・出典・確認日） |
-| `main.js` | 画面の制御・保存・共有リンク |
-| `screen.js` | 画面の部品（上端の固定バー、`details` の `summary` の状態表示） |
+| `index.html` | ツール本体（ファイルを選ぶ → 結果とダウンロード → 出力の形・時刻と単位） |
+| `guide.html` | 使い方・書き出し方・読むファイルと時刻の扱い・よくある質問・注意・更新履歴 |
+| `zip.js` | zip の読み（中央ディレクトリ・ZIP64・deflate）と書き（無圧縮） |
+| `calc.js` | 種類の判定・読み込み・日ごとのまとめ・CSV・Markdown・見本（架空） |
+| `constants.js` | 形式と手順の出典・確認日（`CHECKED`） |
+| `main.js` | 画面の制御（ファイルの選択・ドロップ・ダウンロード）。保存はしない |
+| `screen.js` | 画面の部品（`details` の `summary` の状態表示） |
 | `style.css` | 見た目（和紙風の配色、ダークモード対応） |
-| `sw.js` / `manifest.webmanifest` | オフライン対応（使う場合のみ） |
+| `sw.js` / `manifest.webmanifest` | オフライン対応（キャッシュ名 `fitbit-export-v1`） |
 | `404.html` | ツール配下の存在しない URL で出るページ（サイト共通のもの） |
 | `favicon.svg` / `apple-touch-icon.png` / `og-image.png` | アイコン / ホーム画面用アイコン / SNS 共有用画像（1200×630） |
 | `sitemap.xml` | サイトマップ（robots.txt はドメイン直下で管理） |
-| `tests/*.test.js` | テスト（`node --test tests/*.test.js`。`.github/workflows/test.yml` で push・PR のたびに自動実行） |
+| `tests/*.test.js`・`tests/fixtures/` | テストと架空の書き出し |
 
 ## ライセンス
 
-MIT License（`LICENSE`）。
+MIT License（`LICENSE`）。第三者のコード・データは同梱していない。

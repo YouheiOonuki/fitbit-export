@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>使い方・よくある質問｜__TITLE__｜yorozu-craft</title>
-  <meta name="description" content="__TITLE__の使い方、計算の根拠、よくある質問、ご利用上の注意。">
+  <title>使い方・よくある質問｜Fitbit データ CSV 変換｜yorozu-craft</title>
+  <meta name="description" content="Fitbit（Google Health）のデータを CSV・Excel にする手順。Google Takeout での書き出し方、読むファイル、時刻と体重の単位の扱い、よくある質問。">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://yorozu-craft.com/__REPO__/guide.html">
+  <link rel="canonical" href="https://yorozu-craft.com/fitbit-export/guide.html">
 
-  <meta property="og:title" content="使い方・よくある質問｜__TITLE__">
-  <meta property="og:description" content="__TITLE__の使い方、計算の根拠、よくある質問、ご利用上の注意。">
+  <meta property="og:title" content="使い方・よくある質問｜Fitbit データ CSV 変換">
+  <meta property="og:description" content="Fitbit（Google Health）のデータを CSV・Excel にする手順と、読むファイル・時刻の扱い。">
   <meta property="og:type" content="article">
-  <meta property="og:url" content="https://yorozu-craft.com/__REPO__/guide.html">
+  <meta property="og:url" content="https://yorozu-craft.com/fitbit-export/guide.html">
   <meta property="og:site_name" content="yorozu-craft">
   <meta property="og:locale" content="ja_JP">
-  <meta property="og:image" content="https://yorozu-craft.com/__REPO__/og-image.png">
+  <meta property="og:image" content="https://yorozu-craft.com/fitbit-export/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
@@ -27,13 +27,18 @@
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "無料で使えますか？",
-        "acceptedAnswer": { "@type": "Answer", "text": "はい。会員登録やインストールも不要で、ブラウザだけで使えます。" }
+        "name": "Fitbit の睡眠データを CSV にできないのはなぜ？",
+        "acceptedAnswer": { "@type": "Answer", "text": "Google アカウントに移ったあとの書き出しは、Excel の表ではなく数百〜数千の JSON と CSV が入った zip です。このページで zip を選ぶと、睡眠を 1 日 1 行の CSV にします。" }
       },
       {
         "@type": "Question",
-        "name": "入力した内容はどこに保存されますか？",
-        "acceptedAnswer": { "@type": "Answer", "text": "お使いのブラウザの中にだけ保存され、外部のサーバーには送信されません。" }
+        "name": "sleep_score.csv が開けない・見方がわからない",
+        "acceptedAnswer": { "@type": "Answer", "text": "zip の中の Sleep Score フォルダにあります。このツールは睡眠スコアを睡眠の記録と同じ日の行に入れるので、CSV の「睡眠スコア」の列で見られます。" }
+      },
+      {
+        "@type": "Question",
+        "name": "Garmin や Apple ヘルスケアに移せますか？",
+        "acceptedAnswer": { "@type": "Answer", "text": "このツールは Garmin・Apple ヘルスケアの取り込み形式には書き出しません。出すのは表計算用の CSV と、メモ用の Markdown です。" }
       }
     ]
   }
@@ -51,60 +56,80 @@
 <body>
 
   <header class="app-header">
-    <h1>__TITLE__ の使い方</h1>
-    <p class="subtitle">使い方・計算の根拠・よくある質問・ご利用上の注意</p>
+    <h1>Fitbit データ CSV 変換 の使い方</h1>
+    <p class="subtitle">書き出し方・読むファイル・時刻の扱い・よくある質問</p>
   </header>
 
   <main class="app-main">
 
-    <p class="card" style="text-align:center"><a href="./">▶ __TITLE__ を使う</a></p>
+    <p class="card" style="text-align:center"><a href="./">▶ Fitbit データ CSV 変換 を使う</a></p>
 
     <article class="card content" id="howto">
       <h2>使い方</h2>
       <ol>
-        <li>（手順を書く）</li>
+        <li>Google のデータ書き出しで zip を作り、ダウンロードする（下の手順）</li>
+        <li>「zip を選ぶ」で zip を選ぶ。分かれていたら全部まとめて選ぶ</li>
+        <li>日数と期間、内訳の「直近 7 日」をアプリの値と見比べる</li>
+        <li>CSV（Excel 用）か Markdown（zip）をダウンロードする</li>
       </ol>
     </article>
 
-    <!-- 制度・単価など時点のある値を使うツールだけ残す。値は constants.js、画面にも時点を出す -->
-    <article class="card content" id="basis">
-      <h2>根拠と確認日</h2>
-      <dl class="info-list">
-        <dt>根拠</dt>
-        <dd>（法令・公式ページの名前）</dd>
-        <dt>最終確認日</dt>
-        <dd><time datetime="__DATE__">__DATE_JA__</time></dd>
-      </dl>
-      <p class="small">制度や単価は変わることがあります。最終確認日から時間がたっている場合は、公式ページで最新の情報をご確認ください。</p>
+    <article class="card content" id="export">
+      <h2>Fitbit のデータをエクスポートする方法</h2>
+      <p>Google アカウントで使っているなら、Google のデータ書き出し（takeout.google.com）で「Google Health」を選んで書き出します。形式は .zip を選びます。</p>
+      <details>
+        <summary>もう少しくわしく</summary>
+        <ul>
+          <li>Fitbit アカウントのままの人は、fitbit.com の設定の「データ エクスポート」からアカウント アーカイブを要求します（公式ヘルプ）。</li>
+          <li>2026 年 5 月 19 日以降、Fitbit アカウントではログインできません。データの削除処理は 2026 年 7 月 15 日に始まると案内されています（公式ヘルプ）。</li>
+          <li>書き出しは選んだ上限のサイズを超えると複数の zip に分かれ、リンクは約 7 日で切れます。.tgz はこのツールでは読めません。</li>
+        </ul>
+      </details>
+    </article>
+
+    <article class="card content" id="time">
+      <h2>読むファイルと時刻・単位の扱い</h2>
+      <p>読むのは睡眠・睡眠スコア・歩数・安静時心拍数・体重・運動のファイルだけで、フォルダ名は見ずにファイル名で探します。</p>
+      <ul>
+        <li>歩数と運動の時刻は UTC で記録されているので、選んだタイムゾーンで日付を分けます。</li>
+        <li>weight-日付.json の体重はポンドとみなして kg に直します。weight.csv（グラム）があれば比べて決めます。</li>
+        <li>両方の形がある日は Global Export Data の JSON を使います。</li>
+      </ul>
+      <p class="small">形式の根拠: Google Health ヘルプと公開の解析コード。最終確認日 <time datetime="2026-09-25">2026年9月25日</time>。</p>
+      <details>
+        <summary>読むファイルの名前と出典</summary>
+        <ul id="sources"></ul>
+        <p class="small">Google は書き出しの中身の列を説明していないため、形式は公開の解析コードで確かめました。アプリの値と違うときは、ご要望フォームで教えてください。</p>
+      </details>
     </article>
 
     <article class="card content" id="faq">
       <h2>よくある質問</h2>
       <dl class="faq">
-        <dt>無料で使えますか？</dt>
-        <dd>はい。会員登録やインストールも不要で、ブラウザだけで使えます。</dd>
-        <dt>入力した内容はどこに保存されますか？</dt>
-        <dd>お使いのブラウザの中にだけ保存され、外部のサーバーには送信されません。</dd>
+        <dt>Fitbit の睡眠データを CSV にできないのはなぜ？</dt>
+        <dd>Google アカウントに移ったあとの書き出しは、Excel の表ではなく数百〜数千の JSON と CSV が入った zip です。このページで zip を選ぶと、睡眠を 1 日 1 行の CSV にします。</dd>
+        <dt>sleep_score.csv が開けない・見方がわからない</dt>
+        <dd>zip の中の Sleep Score フォルダにあります。このツールは睡眠スコアを睡眠の記録と同じ日の行に入れるので、CSV の「睡眠スコア」の列で見られます。</dd>
+        <dt>Garmin や Apple ヘルスケアに移せますか？</dt>
+        <dd>このツールは Garmin・Apple ヘルスケアの取り込み形式には書き出しません。出すのは表計算用の CSV と、メモ用の Markdown です。</dd>
       </dl>
     </article>
 
-    <!-- README「ツールを追加するとき」8: ツール固有の注意・データの扱いはここに書く -->
     <article class="card content" id="notes">
       <h2>ご利用上の注意・データの扱い</h2>
       <ul>
-        <li><strong>保存されるデータ</strong>：（何をブラウザに保存するか。保存しないならそう書く）</li>
-        <li><strong>バックアップ</strong>：「ファイルに書き出す」で、（保存している内容）を JSON ファイルにできます。ファイルはこの端末の中で作り、どこにも送信しません。機種変更のときやブラウザのデータを消す前に書き出しておき、新しい端末ではファイルを移して「ファイルから読み込む」を押してください（今の内容はファイルの内容に置き換わります）。（ブラウザに保存しないツールではこの行を消す）</li>
-        <li><strong>共有リンク</strong>：（共有機能があれば、リンクに何が含まれるか。URL の「#」以降に入るのでサーバーには送信されない）</li>
-        <li><strong>結果の扱い</strong>：（計算結果は目安であること、最終的な確認先など）</li>
+        <li><strong>ファイル</strong>：選んだファイルはこのブラウザの中で読むだけで、外部に送信しません。ファイルも設定もブラウザに保存せず、ページを閉じると消えます。</li>
+        <li><strong>書き出したファイル</strong>：CSV と Markdown には健康の記録が入ります。共有する前に中身を確かめてください。</li>
+        <li><strong>結果の扱い</strong>：値は書き出しの記録をまとめたもので、アプリの表示と一致するとは限りません。医療の判断には使わないでください。</li>
       </ul>
-      <p><a href="https://docs.google.com/forms/d/e/1FAIpQLSd8B90qh5lEIyr25iw1jOjdQjOyaPZ1_z2wMB4kH-EmEeJYWw/viewform?usp=pp_url&amp;entry.585564634=__REPO__" target="_blank" rel="noopener">ご要望・不具合の報告（Google フォーム）</a>：いただいた内容をもとに直します。お返事はしていません。</p>
+      <p><a href="https://docs.google.com/forms/d/e/1FAIpQLSd8B90qh5lEIyr25iw1jOjdQjOyaPZ1_z2wMB4kH-EmEeJYWw/viewform?usp=pp_url&amp;entry.585564634=fitbit-export" target="_blank" rel="noopener">ご要望・不具合の報告（Google フォーム）</a>：いただいた内容をもとに直します。お返事はしていません。</p>
       <p>サイト全体の運営者情報・免責事項は<a href="../about.html">こちら</a>、プライバシーポリシーは<a href="../privacy-policy.html">こちら</a>です（すべてのツールで共通）。</p>
     </article>
 
     <article class="card content" id="changelog">
       <h2>更新履歴</h2>
       <ul>
-        <li><time datetime="__DATE__">__DATE_JA__</time> 公開</li>
+        <li><time datetime="2026-09-25">2026年9月25日</time> 公開</li>
       </ul>
     </article>
 
@@ -114,7 +139,7 @@
     <nav class="footer-nav" aria-label="フッターナビゲーション">
       <ul>
         <li><a href="../">yorozu-craft トップ</a></li>
-        <li><a href="./">__TITLE__</a></li>
+        <li><a href="./">Fitbit データ CSV 変換</a></li>
         <li><a href="./guide.html" aria-current="page">使い方・よくある質問</a></li>
         <li><a href="../about.html">運営者情報</a></li>
         <li><a href="../privacy-policy.html">プライバシーポリシー</a></li>
@@ -123,6 +148,20 @@
     <p>&copy; 2026 yorozu-craft. All rights reserved.</p>
   </footer>
 
+  <script src="./constants.js"></script>
+  <script>
+    // 出典の一覧は constants.js から（値を 2 か所に持たない）
+    (function () {
+      var ul = document.getElementById('sources');
+      Object.keys(Constants.SOURCES).forEach(function (k) {
+        var s = Constants.SOURCES[k], li = document.createElement('li'), a = document.createElement('a');
+        li.appendChild(document.createTextNode(s.label + ': ' + s.value + '（'));
+        a.href = s.url; a.textContent = s.source; a.rel = 'noopener'; li.appendChild(a);
+        li.appendChild(document.createTextNode('、確認 ' + s.checked + '）'));
+        ul.appendChild(li);
+      });
+    })();
+  </script>
   <!-- Cloudflare Web Analytics（Cookie を使わないアクセス解析） --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b79bf821e1fd4b6683866d493b1de426"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>

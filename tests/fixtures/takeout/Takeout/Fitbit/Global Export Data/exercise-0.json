@@ -1,0 +1,29 @@
+[
+ {
+  "logId": 7001,
+  "activityName": "Walk, outdoor",
+  "activityTypeId": 90013,
+  "averageHeartRate": 105,
+  "calories": 150,
+  "duration": 1800000,
+  "activeDuration": 1740000,
+  "steps": 3000,
+  "logType": "auto_detected",
+  "startTime": "01/11/26 09:30:00",
+  "hasGps": false
+ },
+ {
+  "logId": 7002,
+  "activityName": "Run",
+  "activityTypeId": 90009,
+  "averageHeartRate": 140,
+  "calories": 250,
+  "duration": 1500000,
+  "activeDuration": 1500000,
+  "steps": 4000,
+  "logType": "tracker",
+  "startTime": "01/11/26 22:05:00",
+  "originalStartTime": "2026-01-12T07:05:00.000+09:00",
+  "hasGps": false
+ }
+]
