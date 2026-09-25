@@ -1,0 +1,3 @@
+sleep_id,minutes_in_sleep_period,minutes_asleep,minutes_awake,sleep_start,sleep_end,start_utc_offset,end_utc_offset
+s1,410,380,30,2026-01-10 14:40:00+0000,2026-01-10 21:30:00+0000,+09:00,+09:00
+s2,420,390,30,2026-01-12 14:00:00+0000,2026-01-12 21:00:00+0000,+09:00,+09:00

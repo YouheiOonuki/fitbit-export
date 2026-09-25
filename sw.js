@@ -21,6 +21,7 @@ const PRECACHE_URLS = [
   './constants.js',
   './calc.js',
   './screen.js',
+  './zip.js',
   './main.js',
   './manifest.webmanifest',
   './favicon.svg',

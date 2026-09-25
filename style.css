@@ -201,3 +201,23 @@ details > summary:focus-visible { outline: 2px solid var(--accent); outline-offs
   /* 広告は印刷に出さない（gakushu-print と同じ） */
   ins.adsbygoogle, .google-auto-placed, iframe[id^="aswift"], iframe[id^="google_ads"] { display: none !important; }
 }
+
+/* ===========================
+   このツールの部品（ファイルの選択・内訳の表）
+   =========================== */
+.btn-sub { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+.linkbtn { background: none; border: none; padding: 0.5rem 0; min-height: 44px; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
+.dropzone { border: 2px dashed var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; }
+#drop.dragging .dropzone { border-color: var(--accent); background: var(--accent-soft); }
+.dropzone .hint { font-size: 0.82rem; color: var(--muted); }
+.field label.check { display: flex; gap: 0.5rem; align-items: center; font-weight: normal; min-height: 44px; }
+.field label.check input { width: 1.2rem; height: 1.2rem; }
+.range { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
+.range input { padding: 0.4rem; font-size: 1rem; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); }
+.table-wrap { overflow-x: auto; margin: 0.4rem 0 0.8rem; }
+table.mini { border-collapse: collapse; font-size: 0.85rem; min-width: 100%; }
+table.mini caption { text-align: left; font-weight: 600; padding: 0.3rem 0; }
+table.mini th, table.mini td { border-bottom: 1px solid var(--border); padding: 0.3rem 0.5rem; text-align: left; white-space: nowrap; }
+table.mini td:nth-child(n+2) { font-variant-numeric: tabular-nums; }
+.notes { font-size: 0.85rem; padding-left: 1.2rem; margin: 0.4rem 0 0.8rem; }
+.notes li + li { margin-top: 0.3rem; }
