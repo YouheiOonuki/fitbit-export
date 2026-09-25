@@ -160,7 +160,7 @@
    */
   function parseInto(raw, kind, text) {
     var n = 0;
-    var json = function () { var a = JSON.parse(text); if (!Array.isArray(a)) throw new Error('形が違います（配列ではありません）'); return a; };
+    var json = function () { var a = JSON.parse(text); if (!Array.isArray(a)) { var err = new Error('形が違います（配列ではありません）'); err.code = 'notArray'; throw err; } return a; };
     switch (kind) {
       case 'sleep-json':
         json().forEach(function (s) { var r = sleepFromJson(s); if (r) { raw.sleep.set(r.id, r); n++; } });
@@ -284,7 +284,7 @@
       return p.then(function () {
         return Promise.resolve().then(function () { return it.s.read(); })
           .then(function (text) { parseInto(raw, it.kind, text); })
-          .catch(function (e) { errors.push({ path: it.s.path, message: e && e.message ? e.message : String(e) }); })
+          .catch(function (e) { errors.push({ path: it.s.path, message: e && e.message ? e.message : String(e), code: e && e.code, arg: e && e.arg }); })
           .then(function () { done++; if (onProgress) onProgress({ done: done, total: picked.length, path: it.s.path }); });
       });
     }, Promise.resolve()).then(function () {
@@ -367,6 +367,7 @@
     }).sort(function (a, b) { return a.t - b.t || (a.src === 'json' ? 1 : -1); }).forEach(function (w) {
       var r = day(w.date);   // その日の最後の記録（同じ時刻なら JSON）
       r.weight = Math.round(w.kg * 10) / 10;
+      r.weightKgRaw = w.kg;   // 丸める前の kg（出力をポンドにするとき、丸めた kg から戻して 0.1 ずれないように）
       if (w.bmi != null) r.bmi = Math.round(w.bmi * 10) / 10;
       if (w.fat != null) r.fat = Math.round(w.fat * 10) / 10;
     });
@@ -454,6 +455,22 @@
     ['hr', '平均心拍数', 'average_heart_rate'],
   ];
 
+  /** 出力の体重の単位（'kg' か 'lb'）。英語の画面で選べる。既定は kg */
+  function weightOut(u) { return u === 'lb' ? 'lb' : 'kg'; }
+  /** その日の体重を出力の単位で（0.1 に丸める） */
+  function weightIn(r, unit) {
+    if (r.weight == null) return null;
+    if (weightOut(unit) === 'kg') return r.weight;
+    var kg = r.weightKgRaw != null ? r.weightKgRaw : r.weight;
+    return Math.round(kg / LB * 10) / 10;
+  }
+  /** 日ごとの列（体重の列だけ単位で名前が変わる） */
+  function dailyCols(unit) {
+    if (weightOut(unit) === 'kg') return DAILY_COLS;
+    return DAILY_COLS.map(function (c) { return c[0] === 'weight' ? ['weight', '体重(lb)', 'weight_lb'] : c; });
+  }
+  function cellValue(r, key, unit) { return key === 'weight' ? weightIn(r, unit) : r[key]; }
+
   function inRange(d, from, to) { return (!from || d >= from) && (!to || d <= to); }
   function csvCell(v) {
     if (v == null) return '';
@@ -464,14 +481,14 @@
   /**
    * 表を CSV に（Excel 向けに行末は CRLF。BOM を付けると Excel が UTF-8 と分かる）
    * @param {'daily'|'exercise'} which
-   * @param {{bom?:boolean, lang?:'ja'|'en', from?:string, to?:string}} o
+   * @param {{bom?:boolean, lang?:'ja'|'en', from?:string, to?:string, weightOut?:'kg'|'lb'}} o
    */
   function toCsv(result, which, o) {
     o = o || {};
-    var cols = which === 'exercise' ? EXERCISE_COLS : DAILY_COLS;
+    var cols = which === 'exercise' ? EXERCISE_COLS : dailyCols(o.weightOut);
     var rows = (which === 'exercise' ? result.exercises : result.days).filter(function (r) { return inRange(r.date, o.from, o.to); });
     var lines = [cols.map(function (c) { return csvCell(o.lang === 'en' ? c[2] : c[1]); }).join(',')];
-    rows.forEach(function (r) { lines.push(cols.map(function (c) { return csvCell(r[c[0]]); }).join(',')); });
+    rows.forEach(function (r) { lines.push(cols.map(function (c) { return csvCell(which === 'exercise' ? r[c[0]] : cellValue(r, c[0], o.weightOut)); }).join(',')); });
     return (o.bom ? '﻿' : '') + lines.join('\r\n') + '\r\n';
   }
 
@@ -501,10 +518,10 @@
   }
 
   /** 1 日分のノート（frontmatter つき） */
-  function dayNote(r, lang) {
-    var t = L[lang === 'en' ? 'en' : 'ja'], fm = ['---'];
-    DAILY_COLS.forEach(function (c) {
-      var v = r[c[0]];
+  function dayNote(r, lang, unit) {
+    var t = L[lang === 'en' ? 'en' : 'ja'], fm = ['---'], wu = weightOut(unit);
+    dailyCols(wu).forEach(function (c) {
+      var v = cellValue(r, c[0], wu);
       if (v == null) return;
       if (c[0] === 'sleepStart' || c[0] === 'sleepEnd') v = v.replace(' ', 'T');
       fm.push(c[2] + ': ' + yamlValue(v));
@@ -516,7 +533,7 @@
     if (r.napMin != null) b.push('- ' + t.nap + ': ' + r.napMin + t.min);
     if (r.score != null) b.push('- ' + t.score + ': ' + r.score);
     if (r.rhr != null) b.push('- ' + t.rhr + ': ' + r.rhr);
-    if (r.weight != null) b.push('- ' + t.weight + ': ' + r.weight + ' kg' + (r.fat != null ? t.open + t.fat + ' ' + r.fat + '%' + t.close : ''));
+    if (r.weight != null) b.push('- ' + t.weight + ': ' + weightIn(r, wu) + ' ' + wu + (r.fat != null ? t.open + t.fat + ' ' + r.fat + '%' + t.close : ''));
     if (r.exNames) b.push('- ' + t.ex + ': ' + r.exNames.join(t.exSep) + (r.exMin ? t.open + r.exMin + t.min + t.close : ''));
     return fm.concat(b).join('\n') + '\n';
   }
@@ -526,18 +543,18 @@
     return v.length ? Math.round(v.reduce(function (a, b) { return a + b; }, 0) / v.length) : null;
   }
   /** 1 か月分のノート（frontmatter に平均、本文に日ごとの表） */
-  function monthNote(month, list, lang) {
-    var t = L[lang === 'en' ? 'en' : 'ja'];
+  function monthNote(month, list, lang, unit) {
+    var t = L[lang === 'en' ? 'en' : 'ja'], wu = weightOut(unit);
     var fm = ['---', 'month: ' + yamlValue(month), 'days: ' + list.length];
     [['steps', 'steps_average'], ['sleepMin', 'minutes_asleep_average'], ['score', 'sleep_score_average'], ['rhr', 'resting_heart_rate_average']].forEach(function (p) {
       var a = avg(list, p[0]); if (a != null) fm.push(p[1] + ': ' + a);
     });
     fm.push('source: "fitbit-export"', '---', '', '# ' + month, '');
-    var head = [t.date, t.steps, t.sleep, t.score, t.rhr, t.weight + ' (kg)', t.ex];
+    var head = [t.date, t.steps, t.sleep, t.score, t.rhr, t.weight + ' (' + wu + ')', t.ex];
     var rows = ['| ' + head.join(' | ') + ' |', '|' + head.map(function () { return ' --- '; }).join('|') + '|'];
     list.forEach(function (r) {
       var cells = [r.date, r.steps != null ? fmtInt(r.steps, lang) : '', r.sleepMin != null ? hm(r.sleepMin) : '', r.score != null ? r.score : '',
-        r.rhr != null ? r.rhr : '', r.weight != null ? r.weight : '', r.exNames ? r.exNames.join(t.exSep) : ''];
+        r.rhr != null ? r.rhr : '', r.weight != null ? weightIn(r, wu) : '', r.exNames ? r.exNames.join(t.exSep) : ''];
       rows.push('| ' + cells.map(function (c) { return String(c).replace(/\|/g, '\\|'); }).join(' | ') + ' |');
     });
     return fm.concat(rows).join('\n') + '\n';
@@ -545,7 +562,7 @@
 
   /**
    * Markdown のファイルの束（zip に入れる）。フォルダ「Fitbit/」の下に 1 日 1 ファイルか 1 か月 1 ファイル
-   * @param {{unit?:'day'|'month', lang?:'ja'|'en', from?:string, to?:string}} o
+   * @param {{unit?:'day'|'month', lang?:'ja'|'en', from?:string, to?:string, weightOut?:'kg'|'lb'}} o
    * @returns {Array<{name:string, text:string}>}
    */
   function toMarkdownFiles(result, o) {
@@ -554,9 +571,9 @@
     if (o.unit === 'month') {
       var byMonth = new Map();
       rows.forEach(function (r) { push(byMonth, r.date.slice(0, 7), r); });
-      return Array.from(byMonth.keys()).map(function (m) { return { name: 'Fitbit/' + m + '.md', text: monthNote(m, byMonth.get(m), o.lang) }; });
+      return Array.from(byMonth.keys()).map(function (m) { return { name: 'Fitbit/' + m + '.md', text: monthNote(m, byMonth.get(m), o.lang, o.weightOut) }; });
     }
-    return rows.map(function (r) { return { name: 'Fitbit/' + r.date + '.md', text: dayNote(r, o.lang) }; });
+    return rows.map(function (r) { return { name: 'Fitbit/' + r.date + '.md', text: dayNote(r, o.lang, o.weightOut) }; });
   }
 
   // ---------- 見本（架空のデータ） ----------
@@ -619,7 +636,7 @@
     parseUs: parseUs, parseIso: parseIso, parseOffset: parseOffset, parseCsv: parseCsv, isValidZone: isValidZone, zoneShifter: zoneShifter,
     classify: classify, newRaw: newRaw, parseInto: parseInto, importSources: importSources, aggregate: aggregate,
     toCsv: toCsv, toMarkdownFiles: toMarkdownFiles, dayNote: dayNote, monthNote: monthNote, makeSample: makeSample,
-    DAILY_COLS: DAILY_COLS, EXERCISE_COLS: EXERCISE_COLS,
+    weightIn: weightIn, DAILY_COLS: DAILY_COLS, EXERCISE_COLS: EXERCISE_COLS,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Calc = api;

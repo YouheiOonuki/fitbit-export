@@ -1,15 +1,18 @@
 // ===========================
 // Fitbit データ CSV 変換 — 画面の制御
-// 読み込みと変換は calc.js・zip.js。ファイルはこの端末の中で読むだけで、どこにも送らない（fetch も使わない）
+// 読み込みと変換は calc.js・zip.js、画面の文は text.js（<html lang="en"> なら英語）。ファイルはこの端末の中で読むだけで、どこにも送らない（fetch も使わない）
 // ファイルも設定も localStorage に保存しない（健康の記録を端末に残さないため。README「決めたこと」）
 // ===========================
 (function () {
   'use strict';
   var C = window.Calc, Z = window.Zip;
+  var EN = document.documentElement.lang === 'en';
+  var T = window.Text.TEXT[EN ? 'en' : 'ja'];
   function $(id) { return document.getElementById(id); }
   var el = {
     result: $('result'), sub: $('result-sub'), dlRow: $('dl-row'), detail: $('detail'), detailTable: $('detail-table'), notes: $('notes'), preview: $('preview'),
     bom: $('bom'), lang: $('lang'), mdUnit: $('md-unit'), from: $('from'), to: $('to'), tz: $('tz'), wunit: $('wunit'),
+    wout: $('wout'),   // 出力の体重の単位（英語の画面だけ。日本語の画面は kg）
   };
   var state = { raw: null, res: null, errors: [], skipped: 0, busy: false };
 
@@ -20,90 +23,78 @@
   try { zones = Intl.supportedValuesOf('timeZone'); } catch (e) { zones = []; }
   [here, 'Asia/Tokyo', 'UTC'].forEach(function (z) { if (zones.indexOf(z) < 0) zones.unshift(z); });
   zones.forEach(function (z) {
-    var o = document.createElement('option'); o.value = z; o.textContent = z + (z === here ? '（この端末）' : '');
+    var o = document.createElement('option'); o.value = z; o.textContent = z + (z === here ? T.here : '');
     el.tz.appendChild(o);
   });
   el.tz.value = here;
 
-  function fmt(n) { return Number(n).toLocaleString('ja-JP'); }
+  function fmt(n) { return Number(n).toLocaleString(T.locale); }
   function text(e, t) { e.textContent = t; }
   function cell(tag, t) { var c = document.createElement(tag); c.textContent = t == null ? '' : String(t); return c; }
   function row(tag, cells) { var tr = document.createElement('tr'); cells.forEach(function (t) { tr.appendChild(cell(tag, t)); }); return tr; }
   function li(t) { var x = document.createElement('li'); x.textContent = t; el.notes.appendChild(x); }
 
-  function outOpts() { return { bom: el.bom.checked, lang: el.lang.value, unit: el.mdUnit.value, from: el.from.value || null, to: el.to.value || null }; }
+  function outOpts() {
+    return { bom: el.bom.checked, lang: el.lang.value, unit: el.mdUnit.value, from: el.from.value || null, to: el.to.value || null, weightOut: el.wout ? el.wout.value : 'kg' };
+  }
   function syncSummary() {
-    var o = outOpts();
-    YorozuScreen.detailsSummary({
-      'opt-out': (o.bom ? 'Excel 向け' : 'BOM なし') + (o.lang === 'en' ? '・英語の列名' : '') + '・' + (o.unit === 'month' ? '1 か月 1 ファイル' : '1 日 1 ファイル') + (o.from || o.to ? '・期間あり' : ''),
-      'opt-time': el.tz.value + '・体重 ' + ({ auto: '自動', lb: 'ポンド', kg: 'kg' })[el.wunit.value],
-    });
+    YorozuScreen.detailsSummary({ 'opt-out': T.outState(outOpts()), 'opt-time': T.timeState(el.tz.value, el.wunit.value) });
   }
 
   // --- 結果を出す ---
-  var WEIGHT_NOTE = {
-    assumed: function (w) { return '体重（weight-日付.json）はポンドとみなして kg に直しました' + (w.sample ? '（例: ' + w.sample.date + ' の ' + w.sample.value + ' → ' + (Math.round(w.sample.value * 0.45359237 * 10) / 10) + ' kg）' : '') + '。アプリの値と違えば「時刻と単位」で kg を選んでください。'; },
-    matched: function (w) { return '体重の単位は weight.csv（グラム）と ' + w.compared + ' 回比べて「' + (w.unit === 'lb' ? 'ポンド' : 'kg') + '」と判断しました。'; },
-    chosen: function (w) { return '体重は選んだ単位（' + (w.unit === 'lb' ? 'ポンド' : 'kg') + '）で読みました。'; },
-    none: function () { return null; },
-  };
 
   function render() {
     var r = state.res, s = r.summary;
     el.detail.hidden = false;
     if (!s.dayCount) {
       text(el.result, '—');
-      text(el.sub, '読める記録が見つかりませんでした。Fitbit（Google Health）の書き出しか、内訳で確かめてください。');
+      text(el.sub, T.noRecords);
       el.dlRow.hidden = true;
     } else {
-      text(el.result, fmt(s.dayCount) + ' 日分');
+      text(el.result, T.days(fmt(s.dayCount)));
       var parts = [];
-      if (s.counts.steps) parts.push('歩数 ' + fmt(s.counts.steps));
-      if (s.counts.sleep) parts.push('睡眠 ' + fmt(s.counts.sleep));
-      if (s.counts.rhr) parts.push('心拍 ' + fmt(s.counts.rhr));
-      if (s.counts.weight) parts.push('体重 ' + fmt(s.counts.weight));
-      text(el.sub, s.from + '〜' + s.to + '（' + parts.join('・') + ' 日' + (s.counts.exercise ? '、運動 ' + fmt(s.counts.exercise) + ' 回' : '') + '）');
+      ['steps', 'sleep', 'rhr', 'weight'].forEach(function (k) { if (s.counts[k]) parts.push(T.part[k] + ' ' + fmt(s.counts[k])); });
+      text(el.sub, T.range(s, parts, s.counts.exercise ? fmt(s.counts.exercise) : ''));
       el.dlRow.hidden = false;
       $('dl-ex').hidden = !s.counts.exercise;
     }
 
     // 項目ごとの日数と、使ったファイル
-    var f = s.files, src = s.sources;
+    var f = s.files, src = s.sources, I = T.items;
+    function fl(k) { return f[k] && T.files[k] + ' ' + f[k]; }   // ファイルの種類と数
     el.detailTable.innerHTML = '';
-    el.detailTable.appendChild(row('th', ['項目', '日数', '読んだファイル']));
+    el.detailTable.appendChild(row('th', T.tableHead));
     [
-      ['歩数', s.counts.steps, [f['steps-json'] && 'steps-日付.json ' + f['steps-json'], f['steps-csv'] && 'steps_日付.csv ' + f['steps-csv']]],
-      ['睡眠', s.counts.sleep, [f['sleep-json'] && 'sleep-日付.json ' + f['sleep-json'], f['sleep-csv'] && 'UserSleeps ' + f['sleep-csv']]],
-      ['睡眠スコア', s.counts.score, [f['score-csv'] && 'sleep_score.csv']],
-      ['安静時心拍数', s.counts.rhr, [f['rhr-json'] && 'resting_heart_rate-日付.json ' + f['rhr-json'], f['rhr-csv'] && 'daily_resting_heart_rate.csv']],
-      ['体重', s.counts.weight, [f['weight-json'] && 'weight-日付.json ' + f['weight-json'], f['weight-csv'] && 'weight.csv']],
-      ['運動（回）', s.counts.exercise, [f['exercise-json'] && 'exercise-番号.json ' + f['exercise-json']]],
-    ].forEach(function (x) { el.detailTable.appendChild(row('td', [x[0], fmt(x[1]), x[2].filter(Boolean).join('、') || '—'])); });
+      [I.steps, s.counts.steps, [fl('steps-json'), fl('steps-csv')]],
+      [I.sleep, s.counts.sleep, [fl('sleep-json'), fl('sleep-csv')]],
+      [I.score, s.counts.score, [f['score-csv'] && 'sleep_score.csv']],
+      [I.rhr, s.counts.rhr, [fl('rhr-json'), f['rhr-csv'] && 'daily_resting_heart_rate.csv']],
+      [I.weight, s.counts.weight, [fl('weight-json'), f['weight-csv'] && 'weight.csv']],
+      [I.exercise, s.counts.exercise, [fl('exercise-json')]],
+    ].forEach(function (x) { el.detailTable.appendChild(row('td', [x[0], fmt(x[1]), x[2].filter(Boolean).join(T.listSep) || '—'])); });
 
     // 注意
     el.notes.innerHTML = '';
-    if (src.stepsJson || s.counts.exercise) li('歩数と運動の時刻は UTC で記録されているので、' + s.tz + ' の日付に分けました。');
-    if (s.stepCompare.compared) {
-      li('歩数は 2 つの形（JSON と CSV）で ' + s.stepCompare.compared + ' 日重なり、' + (s.stepCompare.differ ? s.stepCompare.differ + ' 日で食い違いました（JSON の値を使用）' : 'すべて一致しました') +
-        s.stepCompare.examples.map(function (e) { return '。' + e.date + ': ' + fmt(e.json) + ' と ' + fmt(e.csv); }).join('') + '。');
-    }
-    if (src.sleepCsv) li('睡眠のうち ' + src.sleepCsv + ' 日は新しい形（UserSleeps）から読みました。深い・浅い・レムの内訳は出ません。');
-    if (src.scoreTotal && src.scoreLinked < src.scoreTotal) li('睡眠スコア ' + (src.scoreTotal - src.scoreLinked) + ' 件は睡眠の記録と結べず、timestamp の日付に置きました。');
-    var wn = WEIGHT_NOTE[s.weightUnit.reason](s.weightUnit); if (wn) li(wn);
-    if (state.skipped) li('対象外のファイル ' + fmt(state.skipped) + ' 件は読んでいません（心拍数の細かい記録など）。');
+    if (src.stepsJson || s.counts.exercise) li(T.utc(s.tz));
+    if (s.stepCompare.compared) li(T.stepCompare(s.stepCompare, fmt));
+    if (src.sleepCsv) li(T.sleepCsv(src.sleepCsv));
+    if (src.scoreTotal && src.scoreLinked < src.scoreTotal) li(T.scoreUnlinked(src.scoreTotal - src.scoreLinked));
+    var wn = T.weight[s.weightUnit.reason](s.weightUnit); if (wn) li(wn);
+    if (state.skipped) li(T.skipped(fmt(state.skipped)));
     if (state.errors.length) {
-      li('読めなかったファイル ' + state.errors.length + ' 件: ' + state.errors.slice(0, 5).map(function (e) { return e.path.split('/').pop() + '（' + e.message + '）'; }).join('、') + (state.errors.length > 5 ? ' ほか' : ''));
+      li(T.errors(state.errors.length, state.errors.slice(0, 5).map(function (e) { return T.errorItem(e.path.split('/').pop(), window.Text.errorText(T, e)); }), state.errors.length > 5));
     }
 
     // 直近 7 日（アプリの値と見比べる用）
     el.preview.innerHTML = '';
     var last = r.days.slice(-7);
     if (last.length) {
-      var cap = document.createElement('caption'); cap.textContent = '直近 7 日（アプリの値と見比べてください）'; el.preview.appendChild(cap);
-      el.preview.appendChild(row('th', ['日付', '歩数', '睡眠', 'スコア', '心拍', '体重']));
+      var wu = outOpts().weightOut;
+      var cap = document.createElement('caption'); cap.textContent = T.previewCaption; el.preview.appendChild(cap);
+      el.preview.appendChild(row('th', T.previewHead(wu)));
       last.forEach(function (d) {
-        el.preview.appendChild(row('td', [d.date.slice(5), d.steps != null ? fmt(d.steps) : '', d.sleepMin != null ? Math.floor(d.sleepMin / 60) + ':' + ('0' + d.sleepMin % 60).slice(-2) : '',
-          d.score != null ? d.score : '', d.rhr != null ? d.rhr : '', d.weight != null ? d.weight : '']));
+        el.preview.appendChild(row('td', [T.previewDate(d.date), d.steps != null ? fmt(d.steps) : '', d.sleepMin != null ? Math.floor(d.sleepMin / 60) + ':' + ('0' + d.sleepMin % 60).slice(-2) : '',
+          d.score != null ? d.score : '', d.rhr != null ? d.rhr : '', d.weight != null ? C.weightIn(d, wu) : '']));
       });
     }
   }
@@ -115,7 +106,7 @@
   }
 
   // --- 読み込み ---
-  function progress(p) { text(el.sub, '読み込み中… ' + fmt(p.done) + ' / ' + fmt(p.total) + ' ファイル'); }
+  function progress(p) { text(el.sub, T.progress(fmt(p.done), fmt(p.total))); }
 
   function sourcesFromFiles(files) {
     var list = [], zips = [], bad = [];
@@ -125,12 +116,12 @@
       else if (/\.(tgz|tar\.gz|tar)$/i.test(file.name)) bad.push(file.name);
       else list.push({ path: name, size: file.size, read: function () { return file.text(); } });
     });
-    if (bad.length) state.errors.push({ path: bad[0], message: '.tgz は読めません。書き出しの形式で .zip を選ぶか、展開したフォルダを選んでください' });
+    if (bad.length) state.errors.push({ path: bad[0], message: T.tgz });
     return zips.reduce(function (p, zf) {
       return p.then(function () {
         return Z.readIndex(zf).then(function (entries) {
           entries.forEach(function (en) { list.push({ path: en.name, size: en.size, read: function () { return Z.readText(zf, en); } }); });
-        }, function (e) { state.errors.push({ path: zf.name, message: e.message }); });
+        }, function (e) { state.errors.push({ path: zf.name, message: e.message, code: e.code, arg: e.arg }); });
       });
     }, Promise.resolve()).then(function () { return list; });
   }
@@ -139,7 +130,7 @@
     if (state.busy) return;
     state.busy = true;
     state.errors = []; state.skipped = 0;
-    text(el.result, '読み込み中'); text(el.sub, '');
+    text(el.result, T.reading); text(el.sub, '');
     el.dlRow.hidden = true;
     Promise.resolve().then(makeSources).then(function (sources) {
       return C.importSources(sources, progress);
@@ -147,7 +138,7 @@
       state.raw = r.raw; state.skipped = r.skipped; state.errors = state.errors.concat(r.errors);
       recompute();
     }).catch(function (e) {
-      text(el.result, '—'); text(el.sub, '読み込めませんでした: ' + (e && e.message ? e.message : e));
+      text(el.result, '—'); text(el.sub, T.failed(window.Text.errorText(T, e)));
     }).then(function () { state.busy = false; });
   }
 
@@ -213,17 +204,23 @@
   $('dl-md').addEventListener('click', function () {
     if (!state.res) return;
     var files = C.toMarkdownFiles(state.res, outOpts());
-    if (!files.length) { text(el.sub, 'この期間には記録がありません。'); return; }
+    if (!files.length) { text(el.sub, T.emptyRange); return; }
     save(stem('markdown') + '.zip', new Blob([Z.makeZip(files)], { type: 'application/zip' }));
   });
 
   // --- 設定 ---
   [el.bom, el.lang, el.mdUnit, el.from, el.to].forEach(function (x) { x.addEventListener('change', syncSummary); });
+  if (el.wout) {
+    // 既定: 端末の地域が米国なら lb、それ以外は kg（Fitbit のアプリの既定の表示に近い方。画面で変えられる）
+    try { if (/-US$/i.test(navigator.language || '')) el.wout.value = 'lb'; } catch (e) { /* 既定の kg のまま */ }
+    el.wout.addEventListener('change', function () { syncSummary(); if (state.res) render(); });
+  }
   [el.tz, el.wunit].forEach(function (x) { x.addEventListener('change', function () { syncSummary(); recompute(); }); });
   syncSummary();
 
   // オフライン対応（登録は './sw.js' だけ。scope: '/' を指定しない）
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); });
+    // 英語のページ（en/）からも、ツールの直下の sw.js を登録する（scope は /fitbit-export/ 全体）
+    addEventListener('load', function () { navigator.serviceWorker.register(EN ? '../sw.js' : './sw.js').catch(function () {}); });
   }
 })();

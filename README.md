@@ -1,6 +1,6 @@
 # Fitbit データ CSV 変換
 
-公開 URL: **https://yorozu-craft.com/fitbit-export/**
+公開 URL: **https://yorozu-craft.com/fitbit-export/**（英語版 **https://yorozu-craft.com/fitbit-export/en/**）
 
 Fitbit（2026 年 5 月から Google Health）の書き出し（Google Takeout の zip）をブラウザの中で読み、睡眠・睡眠スコア・歩数・安静時心拍数・体重・運動を日ごとの CSV（Excel 用）と Markdown（Obsidian 用）にする。
 yorozu-craft のツールの1つです（共通ルールは [youheioonuki.github.io の README](https://github.com/YouheiOonuki/youheioonuki.github.io) を参照）。企画書は yorozu-plans の `docs/23_Fitbit書き出し変換.md`（K81）。
@@ -12,6 +12,14 @@ yorozu-craft のツールの1つです（共通ルールは [youheioonuki.github
 - 出力: 日ごとの CSV（BOM あり/なし、列名 日本語/英語、期間）、運動の一覧の CSV、Markdown の zip（1 日 1 ファイルの frontmatter つき、または 1 か月 1 ファイルの表）
 - **ファイルは端末の外に出ない**: 送信・アップロード・API・トークンは使わない。ファイルも設定も localStorage に保存しない（健康の記録を端末に残さない）。オフライン対応（`sw.js`）なので、一度開けば機内モードでも動く
 - Garmin・Apple ヘルスケア・Strava の取り込み形式への変換はしない（MVP の外）
+
+## 英語版（`en/`、2026-09-25）
+
+- `en/index.html`・`en/guide.html`。同じ `calc.js`・`zip.js`・`main.js` を使い、画面の文だけ `text.js` の `en`（`<html lang="en">` で切り替え）。calc.js・zip.js の例外は `code` を持ち、英語の文は `text.js` の `err`
+- 英語の既定: 列名は英語、体重の出力の単位を選べる（`#wout`。端末の言語が `-US` なら lb、ほかは kg）。日本語の画面は kg のまま。`weight-*.json` の単位の判断（自動・lb・kg）は日英で同じ
+- hreflang（ja・en・x-default＝日本語）を日英の 4 ページに。切り替えリンクは上端。英語のフッターのホームは `/en/`、共通ページは `/en/about.html`・`/en/privacy-policy.html`
+- 出典の英語の文は `constants.js` の `SOURCES.*.en`（確認日は同じ `CHECKED`）
+- 何も保存しないので、リセットのボタンは置かない（画面に "Nothing is saved." と書く）
 
 ## 読み方
 
@@ -77,7 +85,9 @@ zip の読み方にライブラリ（fflate など）を使わなかった理由
 | `guide.html` | 使い方・書き出し方・読むファイルと時刻の扱い・よくある質問・注意・更新履歴 |
 | `zip.js` | zip の読み（中央ディレクトリ・ZIP64・deflate）と書き（無圧縮） |
 | `calc.js` | 種類の判定・読み込み・日ごとのまとめ・CSV・Markdown・見本（架空） |
-| `constants.js` | 形式と手順の出典・確認日（`CHECKED`） |
+| `constants.js` | 形式と手順の出典・確認日（`CHECKED`）。英語の文は `en` |
+| `text.js` | 画面の文（日本語・英語） |
+| `en/index.html`・`en/guide.html` | 英語版の本体と使い方 |
 | `main.js` | 画面の制御（ファイルの選択・ドロップ・ダウンロード）。保存はしない |
 | `screen.js` | 画面の部品（`details` の `summary` の状態表示） |
 | `style.css` | 見た目（和紙風の配色、ダークモード対応） |

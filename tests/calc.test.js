@@ -237,3 +237,26 @@ test('constants: 出典ごとに source・url・確認日がある', () => {
     assert.ok(['official', 'public-code'].includes(c.kind), key);
   }
 });
+
+test('体重の出力の単位（英語の画面で選ぶ）: lb は丸める前の kg から戻す。既定は kg のまま', async () => {
+  const r = await C.importSources(fixtureSources());
+  const res = C.aggregate(r.raw, { tz: 'Asia/Tokyo' });
+  const d = byDate(res);
+  // 1/11 は weight-*.json の 154.3 lb（69.99 kg → 表では 70）。lb に戻すと 154.3（丸めた 70 kg から戻すと 154.3 にならない値もある）
+  assert.equal(C.weightIn(d['2026-01-11'], 'lb'), 154.3);
+  assert.equal(C.weightIn(d['2026-01-11'], 'kg'), 70);
+  assert.equal(C.weightIn(d['2026-01-11']), 70);
+  assert.equal(C.weightIn(d['2026-01-14'], 'lb'), Math.round(d['2026-01-14'].weightKgRaw / 0.45359237 * 10) / 10);
+  assert.equal(C.weightIn(d['2026-01-10'], 'lb'), null);
+  const lb = C.toCsv(res, 'daily', { lang: 'en', weightOut: 'lb' }).trim().split('\r\n');
+  assert.ok(lb[0].includes(',weight_lb,') && !lb[0].includes('weight_kg'));
+  assert.equal(lb[2].split(',')[13], '154.3');
+  assert.ok(C.toCsv(res, 'daily', { weightOut: 'lb' }).includes(',体重(lb),'));
+  assert.ok(C.toCsv(res, 'daily', { lang: 'en' }).includes(',weight_kg,'));
+  const md = C.toMarkdownFiles(res, { unit: 'day', lang: 'en', weightOut: 'lb' })[1].text;
+  assert.match(md, /\nweight_lb: 154\.3\n/);
+  assert.match(md, /\n- Weight: 154\.3 lb \(body fat 21\.5%\)\n/);
+  const month = C.toMarkdownFiles(res, { unit: 'month', lang: 'en', weightOut: 'lb' })[0].text;
+  assert.match(month, /\| Weight \(lb\) \|/);
+  assert.match(month, /\| 2026-01-11 \| 1,500 \| 6:20 \| 81 \| 58 \| 154\.3 \|/);
+});
