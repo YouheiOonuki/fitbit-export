@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Export Fitbit Data to CSV from Google Takeout – Guide and FAQ | yorozu-craft</title>
+  <meta name="description" content="How to export your Fitbit data with Google Takeout, which files in the zip hold sleep, steps, heart rate and weight, how UTC times and pounds are handled, and how to open the result in Excel.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://yorozu-craft.com/fitbit-export/en/guide.html">
+  <link rel="alternate" hreflang="ja" href="https://yorozu-craft.com/fitbit-export/guide.html">
+  <link rel="alternate" hreflang="en" href="https://yorozu-craft.com/fitbit-export/en/guide.html">
+  <link rel="alternate" hreflang="x-default" href="https://yorozu-craft.com/fitbit-export/guide.html">
+
+  <meta property="og:title" content="How to Export Fitbit Data to CSV | yorozu-craft">
+  <meta property="og:description" content="Google Takeout steps, the files the converter reads, time zones and weight units, and FAQ.">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://yorozu-craft.com/fitbit-export/en/guide.html">
+  <meta property="og:site_name" content="yorozu-craft">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta property="og:image" content="https://yorozu-craft.com/fitbit-export/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- よくある質問（下の #faq と内容をそろえる） -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I export Fitbit data to Excel?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Export your data with Google Takeout, select the zip in the converter and download the CSV. Excel opens it directly, with one row per day." }
+      },
+      {
+        "@type": "Question",
+        "name": "Why is my Fitbit export full of JSON files instead of a spreadsheet?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Google Takeout splits your data into many JSON and CSV files by type and date. The converter combines them into one table." }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I import the CSV into Garmin or Apple Health?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. The converter makes a CSV for spreadsheets and Markdown for notes. It does not create Garmin or Apple Health import files." }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Google AdSense（サイト所有確認 + 広告配信スクリプト） -->
+  <meta name="google-adsense-account" content="ca-pub-5375267956079717">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5375267956079717"
+     crossorigin="anonymous"></script>
+
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <p class="lang-switch no-print"><a href="../guide.html" hreflang="ja" lang="ja">日本語</a></p>
+
+  <header class="app-header">
+    <h1>How to Export Fitbit Data to CSV</h1>
+    <p class="subtitle">What this page covers: getting your data out of Google Takeout, what the converter reads, and common questions.</p>
+    <p class="tm">Unofficial. Not affiliated with Fitbit or Google.</p>
+  </header>
+
+  <main class="app-main">
+
+    <p class="card" style="text-align:center"><a href="./">▶ Open the Fitbit Data to CSV Converter</a></p>
+
+    <article class="card content" id="howto">
+      <h2>How to use</h2>
+      <ol>
+        <li>Export your data from Google Takeout as a .zip (steps below).</li>
+        <li>Open the converter and select the zip. If the export came in parts, select them all.</li>
+        <li>Compare the day count and the "Last 7 days" table with the app.</li>
+        <li>Download the CSV for Excel or Google Sheets, or the Markdown zip for a notes app such as Obsidian.</li>
+      </ol>
+    </article>
+
+    <article class="card content" id="export">
+      <h2>How to export your Fitbit data</h2>
+      <p>If you sign in with a Google Account, open Google Takeout (takeout.google.com), select Google Health and choose .zip as the file type. Google emails you a download link when the export is ready.</p>
+      <details>
+        <summary>More details</summary>
+        <ul>
+          <li>If you still sign in with a Fitbit account, request your account archive from Data Export in the Settings menu on fitbit.com. It can take a few days (Google Health Help).</li>
+          <li>After May 19, 2026, Fitbit accounts can no longer sign in. Google announced that data deletion would begin on July 15, 2026 (Google Health Help).</li>
+          <li>Exports larger than the size you choose are split into several zips, and the link expires after about 7 days. The converter does not read .tgz files.</li>
+        </ul>
+      </details>
+    </article>
+
+    <article class="card content" id="time">
+      <h2>Which files are read, and how times and units are handled</h2>
+      <p>The converter reads only the sleep, sleep score, steps, resting heart rate, weight and exercise files. It finds them by file name, so folder names do not matter.</p>
+      <ul>
+        <li>Step and exercise times are recorded in UTC. They are split into days in the time zone you choose (default: this device).</li>
+        <li>Weight in weight-YYYY-MM-DD.json is read as pounds. If weight.csv (grams) is also there, the two are compared to decide. The output can be kg or lb.</li>
+        <li>If a day appears in both formats, the JSON in Global Export Data is used.</li>
+        <li>Dates are written as YYYY-MM-DD, and times in 24-hour format.</li>
+      </ul>
+      <p class="small">Sources: Google Health Help and public parsers. Last checked <time datetime="2026-09-25">2026-09-25</time>.</p>
+      <details>
+        <summary>CSV columns</summary>
+        <p>Daily CSV: date, steps, sleep_start, sleep_end, minutes_asleep, minutes_awake, time_in_bed, deep_minutes, light_minutes, rem_minutes, other_sleep_minutes, sleep_score, resting_heart_rate, weight_kg (or weight_lb), bmi, body_fat_percent, exercise_count, exercise_minutes, exercise_types.</p>
+        <p>Exercise CSV: start, activity, duration_minutes, active_minutes, steps, calories, average_heart_rate.</p>
+      </details>
+      <details>
+        <summary>File names and sources</summary>
+        <ul id="sources"></ul>
+        <p class="small">Google does not document the columns in the export, so the formats were checked against public parsers. If your values differ from the app, tell us through the feedback form below.</p>
+      </details>
+    </article>
+
+    <article class="card content" id="faq">
+      <h2>FAQ</h2>
+      <dl class="faq">
+        <dt>How do I export Fitbit data to Excel?</dt>
+        <dd>Export your data with Google Takeout, select the zip in the converter and download the CSV. Excel opens it directly, with one row per day.</dd>
+        <dt>Why is my Fitbit export full of JSON files instead of a spreadsheet?</dt>
+        <dd>Google Takeout splits your data into many JSON and CSV files by type and date. The converter combines them into one table.</dd>
+        <dt>Can I import the CSV into Garmin or Apple Health?</dt>
+        <dd>No. The converter makes a CSV for spreadsheets and Markdown for notes. It does not create Garmin or Apple Health import files.</dd>
+      </dl>
+    </article>
+
+    <article class="card content" id="notes">
+      <h2>Notes and your data</h2>
+      <ul>
+        <li><strong>Your files</strong>: The files you choose are read in this browser and never sent anywhere. Nothing is saved, and closing the page clears everything.</li>
+        <li><strong>Downloads</strong>: The CSV and Markdown files contain your health records. Check them before you share them.</li>
+        <li><strong>Results</strong>: Values are totals of the records in your export and may not match the app. Do not use them for medical decisions.</li>
+      </ul>
+      <p><a href="https://docs.google.com/forms/d/e/1FAIpQLSd8B90qh5lEIyr25iw1jOjdQjOyaPZ1_z2wMB4kH-EmEeJYWw/viewform?usp=pp_url&amp;entry.585564634=fitbit-export" target="_blank" rel="noopener">Feedback form</a> (Google Forms, in Japanese; you can write in English). We read every message but do not reply.</p>
+      <p>Site-wide <a href="../../en/about.html">About and disclaimer</a> and <a href="../../en/privacy-policy.html">Privacy Policy</a>.</p>
+    </article>
+
+    <article class="card content" id="changelog">
+      <h2>Changelog</h2>
+      <ul>
+        <li><time datetime="2026-09-25">2026-09-25</time> English version published</li>
+      </ul>
+    </article>
+
+  </main>
+
+  <footer class="app-footer">
+    <nav class="footer-nav" aria-label="Footer">
+      <ul>
+        <li><a href="../../en/">yorozu-craft (English)</a></li>
+        <li><a href="./">Fitbit Data to CSV Converter</a></li>
+        <li><a href="./guide.html" aria-current="page">Guide and FAQ</a></li>
+        <li><a href="../../en/about.html">About</a></li>
+        <li><a href="../../en/privacy-policy.html">Privacy Policy</a></li>
+      </ul>
+    </nav>
+    <p>&copy; 2026 yorozu-craft. All rights reserved.</p>
+  </footer>
+
+  <script src="../constants.js"></script>
+  <script>
+    // 出典の一覧は constants.js の en から（確認日と出典の先は日本語版と同じ値）
+    (function () {
+      var ul = document.getElementById('sources');
+      Object.keys(Constants.SOURCES).forEach(function (k) {
+        var s = Constants.SOURCES[k], e = s.en, li = document.createElement('li'), a = document.createElement('a');
+        li.appendChild(document.createTextNode(e.label + ': ' + e.value + ' ('));
+        a.href = e.url || s.url; a.textContent = e.source; a.rel = 'noopener'; li.appendChild(a);
+        li.appendChild(document.createTextNode(', checked ' + s.checked + ')'));
+        ul.appendChild(li);
+      });
+    })();
+  </script>
+  <!-- Cloudflare Web Analytics（Cookie を使わないアクセス解析） --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b79bf821e1fd4b6683866d493b1de426"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

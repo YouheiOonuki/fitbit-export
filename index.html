@@ -7,6 +7,9 @@
   <meta name="description" content="Fitbit（Google Health）の書き出し zip から、睡眠・睡眠スコア・歩数・安静時心拍数・体重を日ごとの CSV（Excel 用）と Markdown（Obsidian 用）に。ファイルはブラウザの中で読み、送信しません。">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://yorozu-craft.com/fitbit-export/">
+  <link rel="alternate" hreflang="ja" href="https://yorozu-craft.com/fitbit-export/">
+  <link rel="alternate" hreflang="en" href="https://yorozu-craft.com/fitbit-export/en/">
+  <link rel="alternate" hreflang="x-default" href="https://yorozu-craft.com/fitbit-export/">
 
   <meta property="og:title" content="Fitbit データを CSV・Excel に変換｜yorozu-craft">
   <meta property="og:description" content="Fitbit（Google Health）の書き出し zip から、睡眠・歩数・安静時心拍数・体重を日ごとの CSV と Markdown に。ファイルは送信しません。">
@@ -47,10 +50,14 @@
 </head>
 <body>
 
+  <p class="lang-switch no-print"><a href="./en/" hreflang="en" lang="en">English</a></p>
+
   <header class="app-header">
     <h1>Fitbit データ CSV 変換</h1>
     <!-- 道具の冒頭は 1 文・40 字（WRITING.md 1 章）。「外部に送信しない」をここに -->
     <p class="subtitle">書き出しの zip を日ごとの表に。ファイルは端末の外に出ません。</p>
+    <!-- 商標（REVIEW C7 R9）: 名前の近くに 1 文 -->
+    <p class="tm">非公式のツールです。Fitbit・Google とは関係ありません。</p>
   </header>
 
   <!-- 画面の骨組み「入力 → 結果」（SCREEN.md 1.1）。1 ファイルを選ぶ → 2 結果（日数・期間とダウンロード）→ 3 出力の形・時刻と単位 → 4 使い方へのリンク。
@@ -156,6 +163,7 @@
   </footer>
 
   <script src="./constants.js"></script>
+  <script src="./text.js"></script>
   <script src="./screen.js"></script>
   <script src="./zip.js"></script>
   <script src="./calc.js"></script>

@@ -10,15 +10,19 @@
 'use strict';
 
 const CACHE_PREFIX = 'fitbit-export-';
-const CACHE_NAME   = `${CACHE_PREFIX}v1`; // キャッシュする中身の構成を変えたら上げる
+const CACHE_NAME   = `${CACHE_PREFIX}v2`; // キャッシュする中身の構成を変えたら上げる（v2: 英語のページと text.js）
 
 /** 初回インストール時に取得しておくファイル */
 const PRECACHE_URLS = [
   './',
   './index.html',
   './guide.html',
+  './en/',
+  './en/index.html',
+  './en/guide.html',
   './style.css',
   './constants.js',
+  './text.js',
   './calc.js',
   './screen.js',
   './zip.js',

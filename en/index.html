@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Export Fitbit Data to CSV and Excel (Google Takeout Converter) | yorozu-craft</title>
+  <meta name="description" content="Convert your Fitbit export from Google Takeout into a CSV with one row per day: sleep, sleep score, steps, resting heart rate, weight and exercise. Opens in Excel. Runs in your browser; nothing is uploaded.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://yorozu-craft.com/fitbit-export/en/">
+  <link rel="alternate" hreflang="ja" href="https://yorozu-craft.com/fitbit-export/">
+  <link rel="alternate" hreflang="en" href="https://yorozu-craft.com/fitbit-export/en/">
+  <link rel="alternate" hreflang="x-default" href="https://yorozu-craft.com/fitbit-export/">
+
+  <meta property="og:title" content="Export Fitbit Data to CSV and Excel | yorozu-craft">
+  <meta property="og:description" content="Turn your Fitbit Google Takeout zip into one CSV row per day: sleep, steps, resting heart rate, weight. Nothing is uploaded.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://yorozu-craft.com/fitbit-export/en/">
+  <meta property="og:site_name" content="yorozu-craft">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta property="og:image" content="https://yorozu-craft.com/fitbit-export/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#8b4513" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1c1814" media="(prefers-color-scheme: dark)">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Fitbit Data to CSV Converter",
+    "description": "Convert your Fitbit export from Google Takeout into a CSV with one row per day: sleep, sleep score, steps, resting heart rate, weight and exercise. Runs in your browser; nothing is uploaded.",
+    "url": "https://yorozu-craft.com/fitbit-export/en/",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "All",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+    "inLanguage": "en"
+  }
+  </script>
+
+  <!-- Google AdSense（サイト所有確認 + 広告配信スクリプト） -->
+  <meta name="google-adsense-account" content="ca-pub-5375267956079717">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5375267956079717"
+     crossorigin="anonymous"></script>
+
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../apple-touch-icon.png">
+  <link rel="manifest" href="../manifest.webmanifest">
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+  <p class="lang-switch no-print"><a href="../" hreflang="ja" lang="ja">日本語</a></p>
+
+  <header class="app-header">
+    <h1>Fitbit Data to CSV Converter</h1>
+    <p class="subtitle">Turn your Google Takeout zip into one row per day. Your files never leave this browser.</p>
+    <!-- 商標（REVIEW C7 R9） -->
+    <p class="tm">Unofficial. Not affiliated with Fitbit or Google.</p>
+  </header>
+
+  <!-- 日本語版（../index.html）と同じ骨組み・同じ id。文は text.js の en。ファイルも設定も保存しない -->
+  <main class="app-main">
+
+    <fieldset class="card req" id="drop">
+      <legend>Your export</legend>
+      <div class="dropzone" id="dropzone">
+        <div class="btn-row">
+          <button type="button" class="btn" id="pick-zip">Choose zip</button>
+          <button type="button" class="btn btn-sub" id="pick-dir">Choose unzipped folder</button>
+        </div>
+        <p class="hint">The Google Takeout .zip (Google Health). Split into parts? Select them all.</p>
+        <p class="small"><button type="button" class="linkbtn" id="try-sample">Try it with sample data (fictional)</button></p>
+      </div>
+      <input type="file" id="file-zip" accept=".zip,.json,.csv,application/zip" multiple hidden>
+      <input type="file" id="file-dir" webkitdirectory multiple hidden>
+    </fieldset>
+
+    <section class="card result-card" id="result-card" tabindex="-1" aria-labelledby="h-result">
+      <h2 id="h-result">Result</h2>
+      <div id="result-main" aria-live="polite">
+        <p class="result-big" id="result">—</p>
+        <p class="result-sub" id="result-sub">Choose a file to see how many days it covers.</p>
+      </div>
+      <div class="btn-row no-print" id="dl-row" hidden>
+        <button type="button" class="btn" id="dl-csv">Download CSV</button>
+        <button type="button" class="btn" id="dl-md">Download Markdown (zip)</button>
+        <button type="button" class="btn btn-sub" id="dl-ex">Exercise list (CSV)</button>
+      </div>
+      <details class="rels" id="detail" hidden>
+        <summary>Details (days per item, notes, last 7 days)</summary>
+        <div class="table-wrap"><table class="mini" id="detail-table"></table></div>
+        <ul class="notes" id="notes"></ul>
+        <div class="table-wrap"><table class="mini" id="preview"></table></div>
+      </details>
+      <p class="small">Values are totals of the records in your export. If they differ from the app, see <a href="./guide.html#time">the guide</a>.</p>
+    </section>
+
+    <div class="opts">
+      <details class="card opt" id="opt-out">
+        <summary>Output: <span class="opt-state">Excel-ready · kg · one file per day</span></summary>
+        <div class="field">
+          <label for="wout">Weight unit</label>
+          <select id="wout">
+            <option value="kg" selected>Kilograms (kg)</option>
+            <option value="lb">Pounds (lb)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="check"><input type="checkbox" id="bom" checked> Add a BOM so Excel opens the CSV as UTF-8</label>
+        </div>
+        <div class="field">
+          <label for="lang">Column names</label>
+          <select id="lang">
+            <option value="en" selected>English (date, steps …)</option>
+            <option value="ja">Japanese</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="md-unit">Markdown files</label>
+          <select id="md-unit">
+            <option value="day" selected>One file per day (with frontmatter)</option>
+            <option value="month">One file per month (table)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="from">Date range (leave empty for all)</label>
+          <div class="range"><input type="date" id="from" aria-label="Start date"> to <input type="date" id="to" aria-label="End date"></div>
+        </div>
+      </details>
+      <details class="card opt" id="opt-time">
+        <summary>Time zone and units: <span class="opt-state">—</span></summary>
+        <div class="field">
+          <label for="tz">Time zone for splitting days</label>
+          <p class="hint">Step and exercise times are recorded in UTC.</p>
+          <select id="tz"></select>
+        </div>
+        <div class="field">
+          <label for="wunit">Unit in weight-YYYY-MM-DD.json</label>
+          <select id="wunit">
+            <option value="auto" selected>Auto (usually pounds)</option>
+            <option value="lb">Pounds (lb)</option>
+            <option value="kg">Kilograms (kg)</option>
+          </select>
+        </div>
+      </details>
+    </div>
+
+    <p class="small">Nothing is saved. Your files are read on this device only and are gone when you close the page.</p>
+    <p class="small"><a href="./guide.html">How to export, which files are read, FAQ</a></p>
+
+  </main>
+
+  <footer class="app-footer">
+    <nav class="footer-nav" aria-label="Footer">
+      <ul>
+        <li><a href="../../en/">yorozu-craft (English)</a></li>
+        <li><a href="./" aria-current="page">Fitbit Data to CSV Converter</a></li>
+        <li><a href="./guide.html">Guide and FAQ</a></li>
+        <li><a href="../../en/about.html">About</a></li>
+        <li><a href="../../en/privacy-policy.html">Privacy Policy</a></li>
+      </ul>
+    </nav>
+    <p>&copy; 2026 yorozu-craft. All rights reserved.</p>
+  </footer>
+
+  <script src="../constants.js"></script>
+  <script src="../text.js"></script>
+  <script src="../screen.js"></script>
+  <script src="../zip.js"></script>
+  <script src="../calc.js"></script>
+  <script src="../main.js"></script>
+  <!-- Cloudflare Web Analytics（Cookie を使わないアクセス解析） --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b79bf821e1fd4b6683866d493b1de426"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>

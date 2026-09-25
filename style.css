@@ -52,6 +52,10 @@ a { color: var(--accent); }
 }
 .app-header h1 { font-size: 1.45rem; color: var(--accent); line-height: 1.4; }
 .app-header .subtitle { font-size: 0.88rem; color: var(--muted); margin-top: 0.3rem; }
+.app-header .tm { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; }
+
+/* 日英の切り替え（README「ツールを追加するとき」23） */
+.lang-switch { text-align: right; font-size: 0.85rem; padding: 0.4rem max(1rem, calc((100% - 680px) / 2 + 1rem)) 0; background: var(--bg-2); }
 
 /* レイアウト */
 .app-main { max-width: 680px; margin: 0 auto; padding: 1rem; }

@@ -19,6 +19,8 @@
     // 2^53 を超える値は来ない（そこまで大きい zip は扱わない）
     return dv.getUint32(o, true) + dv.getUint32(o + 4, true) * 0x100000000;
   }
+  /** 例外に code を付ける（画面の言語ごとの文は text.js の errors[code]。message は日本語のまま） */
+  function fail(code, message, arg) { var e = new Error(message); e.code = code; if (arg != null) e.arg = arg; return e; }
   var utf8 = typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8') : null;
 
   /**
@@ -28,14 +30,14 @@
    */
   function readIndex(blob) {
     var size = blob.size;
-    if (size < 22) return Promise.reject(new Error('zip ではありません'));
+    if (size < 22) return Promise.reject(fail('notZip', 'zip ではありません'));
     var tail = Math.min(size, 22 + 0xffff + 20);
     return bytesOf(blob, size - tail, size).then(function (dv) {
       var p = -1;
       for (var i = dv.byteLength - 22; i >= 0; i--) {
         if (dv.getUint32(i, true) === SIG_EOCD) { p = i; break; }
       }
-      if (p < 0) throw new Error('zip ではありません');
+      if (p < 0) throw fail('notZip', 'zip ではありません');
       var count = dv.getUint16(p + 10, true), cdSize = dv.getUint32(p + 12, true), cdOff = dv.getUint32(p + 16, true);
       var absEocd = size - tail + p;
       var needs64 = count === MAX16 || cdSize === MAX32 || cdOff === MAX32;
@@ -44,7 +46,7 @@
         if (loc.getUint32(0, true) !== SIG_LOC64) return { count: count, cdSize: cdSize, cdOff: cdOff };
         var off64 = u64(loc, 8);
         return bytesOf(blob, off64, off64 + 56).then(function (e) {
-          if (e.getUint32(0, true) !== SIG_EOCD64) throw new Error('zip の目次が壊れています');
+          if (e.getUint32(0, true) !== SIG_EOCD64) throw fail('badIndex', 'zip の目次が壊れています');
           return { count: u64(e, 32), cdSize: u64(e, 40), cdOff: u64(e, 48) };
         });
       });
@@ -81,14 +83,14 @@
 
   /** zip の 1 項目を文字列（UTF-8）で読む */
   function readText(blob, entry) {
-    if (entry.encrypted) return Promise.reject(new Error('パスワード付きの zip は読めません'));
+    if (entry.encrypted) return Promise.reject(fail('encrypted', 'パスワード付きの zip は読めません'));
     return bytesOf(blob, entry.offset, entry.offset + 30).then(function (dv) {
-      if (dv.getUint32(0, true) !== SIG_LOC) throw new Error('zip の中身が壊れています');
+      if (dv.getUint32(0, true) !== SIG_LOC) throw fail('badEntry', 'zip の中身が壊れています');
       var start = entry.offset + 30 + dv.getUint16(26, true) + dv.getUint16(28, true);
       var part = blob.slice(start, start + entry.compSize);
       if (entry.method === 0) return part.text();
-      if (entry.method !== 8) throw new Error('この圧縮方式（' + entry.method + '）は読めません');
-      if (typeof DecompressionStream === 'undefined') throw new Error('このブラウザは zip の展開に対応していません。最新のブラウザでお試しください');
+      if (entry.method !== 8) throw fail('method', 'この圧縮方式（' + entry.method + '）は読めません', entry.method);
+      if (typeof DecompressionStream === 'undefined') throw fail('noDecompress', 'このブラウザは zip の展開に対応していません。最新のブラウザでお試しください');
       var stream = part.stream().pipeThrough(new DecompressionStream('deflate-raw'));
       return new Response(stream).text();
     });
