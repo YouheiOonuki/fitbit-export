@@ -10,7 +10,7 @@
 'use strict';
 
 const CACHE_PREFIX = 'fitbit-export-';
-const CACHE_NAME   = `${CACHE_PREFIX}v2`; // キャッシュする中身の構成を変えたら上げる（v2: 英語のページと text.js）
+const CACHE_NAME   = `${CACHE_PREFIX}v3`; // キャッシュする中身の構成を変えたら上げる（v2: 英語のページと text.js、v3: 共通の部品 yorozu-common v1）
 
 /** 初回インストール時に取得しておくファイル */
 const PRECACHE_URLS = [
