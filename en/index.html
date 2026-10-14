@@ -68,7 +68,7 @@
           <button type="button" class="btn" id="pick-zip">Choose zip</button>
           <button type="button" class="btn btn-sub" id="pick-dir">Choose unzipped folder</button>
         </div>
-        <p class="hint">The Google Takeout .zip (Google Health). Split into parts? Select them all.</p>
+        <label class="hint" for="file-zip">The Google Takeout .zip (Google Health). Split into parts? Select them all.</label>
         <p class="small"><button type="button" class="linkbtn" id="try-sample">Try it with sample data (fictional)</button></p>
       </div>
       <input type="file" id="file-zip" accept=".zip,.json,.csv,application/zip" multiple hidden>
@@ -79,7 +79,7 @@
       <h2 id="h-result">Result</h2>
       <div id="result-main" aria-live="polite">
         <p class="result-big" id="result">—</p>
-        <p class="result-sub" id="result-sub">Choose a file to see how many days it covers.</p>
+        <p class="result-sub" id="result-sub"></p>
       </div>
       <div class="btn-row no-print" id="dl-row" hidden>
         <button type="button" class="btn" id="dl-csv">Download CSV</button>
@@ -92,7 +92,8 @@
         <ul class="notes" id="notes"></ul>
         <div class="table-wrap"><table class="mini" id="preview"></table></div>
       </details>
-      <p class="small">Values are totals of the records in your export. If they differ from the app, see <a href="./guide.html#time">the guide</a>.</p>
+      <!-- data-keep: 値の出どころ（書き出しの記録をまとめたもので、アプリの表示と違うことがある）。D117 の目安と同じ役目 -->
+      <p class="small" data-keep>Values are totals of the records in your export. If they differ from the app, see <a href="./guide.html#time">the guide</a>.</p>
     </section>
 
     <div class="opts">
@@ -145,7 +146,8 @@
       </details>
     </div>
 
-    <p class="small">Nothing is saved. Your files are read on this device only and are gone when you close the page.</p>
+    <!-- data-keep: 入れたファイルの扱い（保存しない・端末の外に出ない）。A2 の「入力は端末の外に出ない」と同じ役目 -->
+    <p class="small" data-keep>Nothing is saved. Your files are read on this device only and are gone when you close the page.</p>
     <p class="small"><a href="./guide.html">How to export, which files are read, FAQ</a></p>
 
   </main>
