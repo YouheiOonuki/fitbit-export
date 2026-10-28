@@ -21,8 +21,8 @@
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#8b4513" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#1c1814" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#eef0f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#15191d" media="(prefers-color-scheme: dark)">
 
   <script type="application/ld+json">
   {
@@ -67,8 +67,8 @@
       <legend>書き出したファイル</legend>
       <div class="dropzone" id="dropzone">
         <div class="btn-row">
-          <button type="button" class="btn" id="pick-zip">zip を選ぶ</button>
-          <button type="button" class="btn btn-sub" id="pick-dir">展開したフォルダを選ぶ</button>
+          <button type="button" class="btn btn-primary" id="pick-zip">zip を選ぶ</button>
+          <button type="button" class="btn" id="pick-dir">展開したフォルダを選ぶ</button>
         </div>
         <label class="hint" for="file-zip">Google Takeout（Google Health）の .zip。分かれていたら全部まとめて選ぶ。</label>
         <p class="small"><button type="button" class="linkbtn" id="try-sample">見本（架空のデータ）で試す</button></p>
@@ -78,16 +78,16 @@
     </fieldset>
 
     <!-- 2 結果: 日数（大きな数字）と期間。ダウンロードのボタンはここ -->
-    <section class="card result-card" id="result-card" tabindex="-1" aria-labelledby="h-result">
+    <section class="card" id="result-card" tabindex="-1" aria-labelledby="h-result">
       <h2 id="h-result">結果</h2>
       <div id="result-main" aria-live="polite">
-        <p class="result-big" id="result">—</p>
+        <p class="result-num" id="result">—</p>
         <p class="result-sub" id="result-sub"></p>
       </div>
       <div class="btn-row no-print" id="dl-row" hidden>
-        <button type="button" class="btn" id="dl-csv">CSV をダウンロード</button>
+        <button type="button" class="btn btn-primary" id="dl-csv">CSV をダウンロード</button>
         <button type="button" class="btn" id="dl-md">Markdown（zip）をダウンロード</button>
-        <button type="button" class="btn btn-sub" id="dl-ex">運動の一覧（CSV）</button>
+        <button type="button" class="btn" id="dl-ex">運動の一覧（CSV）</button>
       </div>
       <details class="rels" id="detail" hidden>
         <summary>内訳（項目ごとの日数・注意・直近 7 日）</summary>
