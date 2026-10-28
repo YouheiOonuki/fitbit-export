@@ -115,7 +115,6 @@ table.mini th, table.mini td { border-bottom: 1px solid var(--border); padding: 
 /* くわしく入れる（1 グループ 1 つの details）。summary の .opt-state に今の状態を出す（screen.js の detailsSummary） */
 .opts { margin-bottom: var(--sp-4); }
 details.card.opt { padding: 0 var(--sp-4); margin-bottom: var(--sp-3); }
-details.card.opt > summary { color: var(--accent); }
 details.card.opt[open] { padding-bottom: var(--sp-4); }
 details.card.opt[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: var(--sp-4); }
 .opt-state { color: var(--text); font-weight: 400; overflow-wrap: anywhere; }
