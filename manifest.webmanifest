@@ -1,6 +1,6 @@
 {
   "id": "/fitbit-export/",
-  "name": "Fitbit データ CSV 変換｜yorozu-craft",
+  "name": "Fitbit データ CSV 変換",
   "short_name": "Fitbit データ CSV 変換",
   "description": "Google の書き出し（zip）から、睡眠・歩数・安静時心拍数・体重を日ごとの CSV と Markdown に。",
   "lang": "ja",
