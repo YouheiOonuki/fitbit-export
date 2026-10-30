@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <!-- 表（CSV）の上に脈の線。和紙風の配色 -->
-  <rect x="6" y="6" width="52" height="52" rx="10" fill="#faf6ee" stroke="#8b4513" stroke-width="4"/>
-  <path d="M14 40h36M14 48h36M26 36v16M38 36v16" stroke="#cfc0a0" stroke-width="3" fill="none"/>
-  <path d="M12 26h10l4-9 6 17 5-12 3 4h12" stroke="#8b4513" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="6" y="6" width="52" height="52" rx="10" fill="#eef0f2" stroke="#0e5a6b" stroke-width="4"/>
+  <path d="M14 40h36M14 48h36M26 36v16M38 36v16" stroke="#c5ccd3" stroke-width="3" fill="none"/>
+  <path d="M12 26h10l4-9 6 17 5-12 3 4h12" stroke="#0e5a6b" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
