@@ -80,10 +80,12 @@
         <li>Compare the day count and the "Last 7 days" table with the app.</li>
         <li>Download the CSV for Excel or Google Sheets, or the Markdown zip for a notes app such as Obsidian.</li>
       </ol>
+      <h3 id="excel">Can I export Fitbit data to Excel or Google Sheets?</h3>
+      <p>The converter makes a CSV and sends it nowhere. Open it in Excel, or import it into Google Sheets.</p>
     </article>
 
     <article class="card content" id="export">
-      <h2>How to export your Fitbit data</h2>
+      <h2>How to export Fitbit data</h2>
       <p>If you sign in with a Google Account, open Google Takeout (takeout.google.com), select Google Health and choose .zip as the file type. Google emails you a download link when the export is ready.</p>
       <details>
         <summary>More details</summary>
@@ -93,6 +95,8 @@
           <li>Exports larger than the size you choose are split into several zips, and the link expires after about 7 days. The converter does not read .tgz files.</li>
         </ul>
       </details>
+      <h3 id="period">How do I export Fitbit data by time period?</h3>
+      <p>Set Date range under Output in the converter. The downloads then cover only those days.</p>
     </article>
 
     <article class="card content" id="time">
@@ -115,6 +119,12 @@
         <ul id="sources"></ul>
         <p class="small">Google does not document the columns in the export, so the formats were checked against public parsers. If your values differ from the app, tell us through the feedback form below.</p>
       </details>
+      <h3 id="sleep">How do I export Fitbit sleep data?</h3>
+      <p>Sleep goes into the daily CSV: start, end, minutes asleep and awake, sleep stages and sleep score.</p>
+      <h3 id="weight">How do I export Fitbit weight data?</h3>
+      <p>Weight goes into the daily CSV in kg or lb, with BMI and body fat when the export has them.</p>
+      <h3 id="heart-rate">How do I export Fitbit heart rate data?</h3>
+      <p>The daily CSV has resting heart rate, and the exercise CSV has average heart rate. Minute-level heart rate is not written.</p>
     </article>
 
     <article class="card content" id="faq">
@@ -144,8 +154,11 @@
       <h2>Changelog</h2>
       <ul>
         <li><time datetime="2026-09-25">2026-09-25</time> English version published</li>
+        <li><time datetime="2026-11-04">2026-11-04</time> Questions added</li>
       </ul>
     </article>
+
+    <p class="small translation-note">This is an English translation of the <a href="../guide.html" hreflang="ja">Japanese page</a>. If the two differ, the Japanese version prevails.</p>
 
   </main>
 
