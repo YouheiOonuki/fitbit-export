@@ -97,6 +97,7 @@
           d.score != null ? d.score : '', d.rhr != null ? d.rhr : '', d.weight != null ? C.weightIn(d, wu) : '']));
       });
     }
+    window.yzUsed?.();
   }
 
   function recompute() {
