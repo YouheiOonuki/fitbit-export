@@ -10,6 +10,7 @@
   /** 英語の複数形（1 だけ単数） */
   function pl(n, one, many) { return n + ' ' + (String(n) === '1' ? one : many); }
   function kgOf(lb) { return Math.round(lb * LB * 10) / 10; }
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   var TEXT = {
     ja: {
@@ -56,6 +57,14 @@
       previewCaption: '直近 7 日（アプリの値と見比べてください）',
       previewHead: function () { return ['日付', '歩数', '睡眠', 'スコア', '心拍', '体重']; },
       previewDate: function (d) { return d.slice(5); },
+      // 項目 × 月の升目（Q-317）。short は図の行の名前、full は升の aria-label
+      grid: {
+        caption: '月ごとの記録',
+        short: { sleep: '睡眠', score: 'スコア', steps: '歩数', rhr: '心拍', weight: '体重', exercise: '運動' },
+        full: { sleep: '睡眠', score: '睡眠スコア', steps: '歩数', rhr: '安静時心拍数', weight: '体重', exercise: '運動' },
+        cell: function (y, m, item, n) { return y + ' 年 ' + m + ' 月 ' + item + ' ' + n + ' 日'; },
+        legend: ['0 日', '半分未満', '半分以上', '全部の日'],
+      },
     },
 
     en: {
@@ -109,6 +118,13 @@
       previewCaption: 'Last 7 days (compare with the app)',
       previewHead: function (wu) { return ['Date', 'Steps', 'Sleep', 'Score', 'RHR', 'Weight (' + wu + ')']; },
       previewDate: function (d) { return d; },
+      grid: {
+        caption: 'Records by month',
+        short: { sleep: 'Sleep', score: 'Score', steps: 'Steps', rhr: 'RHR', weight: 'Weight', exercise: 'Exercise' },
+        full: { sleep: 'sleep', score: 'sleep score', steps: 'steps', rhr: 'resting heart rate', weight: 'weight', exercise: 'exercise' },
+        cell: function (y, m, item, n) { return MONTHS[m - 1] + ' ' + y + ', ' + item + ': ' + pl(n, 'day', 'days'); },
+        legend: ['No days', 'Under half', 'Half or more', 'Every day'],
+      },
     },
   };
 

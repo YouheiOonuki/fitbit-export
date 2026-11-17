@@ -42,6 +42,16 @@
         "@type": "Question",
         "name": "Garmin や Apple ヘルスケアに移せますか？",
         "acceptedAnswer": { "@type": "Answer", "text": "このツールは Garmin・Apple ヘルスケアの取り込み形式には書き出しません。出すのは表計算用の CSV と、メモ用の Markdown です。" }
+      },
+      {
+        "@type": "Question",
+        "name": "1 時間ごとのデータを書き出せますか？",
+        "acceptedAnswer": { "@type": "Answer", "text": "歩数は書き出しの細かい記録を 15 分ごとに足して読みますが、CSV と Markdown に出すのは日ごとの値です。1 時間ごとの行は出しません。" }
+      },
+      {
+        "@type": "Question",
+        "name": "心拍数のデータも書き出せますか？",
+        "acceptedAnswer": { "@type": "Answer", "text": "日ごとの CSV に安静時心拍数を、運動の一覧に運動ごとの平均心拍数を出します。心拍数の細かい記録のファイル（heart_rate-日付.json）は開きません。" }
       }
     ]
   }
@@ -119,6 +129,10 @@
         <dd>zip の中の Sleep Score フォルダにあります。このツールは睡眠スコアを睡眠の記録と同じ日の行に入れるので、CSV の「睡眠スコア」の列で見られます。</dd>
         <dt>Garmin や Apple ヘルスケアに移せますか？</dt>
         <dd>このツールは Garmin・Apple ヘルスケアの取り込み形式には書き出しません。出すのは表計算用の CSV と、メモ用の Markdown です。</dd>
+        <dt id="hourly">1 時間ごとのデータを書き出せますか？</dt>
+        <dd>歩数は書き出しの細かい記録を 15 分ごとに足して読みますが、CSV と Markdown に出すのは日ごとの値です。1 時間ごとの行は出しません。</dd>
+        <dt id="heart-rate">心拍数のデータも書き出せますか？</dt>
+        <dd>日ごとの CSV に安静時心拍数を、運動の一覧に運動ごとの平均心拍数を出します。心拍数の細かい記録のファイル（heart_rate-日付.json）は開きません。</dd>
       </dl>
     </article>
 
@@ -137,6 +151,7 @@
       <h2>更新履歴</h2>
       <ul>
         <li><time datetime="2026-09-25">2026年9月25日</time> 公開</li>
+        <li><time datetime="2026-11-17">2026年11月17日</time> 項目と月の升目、よくある質問 2 問</li>
       </ul>
     </article>
 

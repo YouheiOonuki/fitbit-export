@@ -10,7 +10,7 @@
   var T = window.Text.TEXT[EN ? 'en' : 'ja'];
   function $(id) { return document.getElementById(id); }
   var el = {
-    result: $('result'), sub: $('result-sub'), dlRow: $('dl-row'), detail: $('detail'), detailTable: $('detail-table'), notes: $('notes'), preview: $('preview'),
+    result: $('result'), sub: $('result-sub'), grid: $('grid'), dlRow: $('dl-row'), detail: $('detail'), detailTable: $('detail-table'), notes: $('notes'), preview: $('preview'),
     bom: $('bom'), lang: $('lang'), mdUnit: $('md-unit'), from: $('from'), to: $('to'), tz: $('tz'), wunit: $('wunit'),
     wout: $('wout'),   // 出力の体重の単位（英語の画面だけ。日本語の画面は kg）
   };
@@ -41,11 +41,67 @@
     YorozuScreen.detailsSummary({ 'opt-out': T.outState(outOpts()), 'opt-time': T.timeState(el.tz.value, el.wunit.value) });
   }
 
+  // --- 項目 × 月の升目（図。数は升ごとの aria-label。並びは calc.js の monthGrid） ---
+  var SVG = 'http://www.w3.org/2000/svg';
+  var G = { label: 64, pitch: 22, size: 18, head: 18 };   // 行の名前の幅・升の間隔・升の大きさ・月の行の高さ（viewBox の単位）
+  function svgEl(tag, attrs, parent) {
+    var e = document.createElementNS(SVG, tag);
+    Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function svgText(parent, x, y, t, cls) { svgEl('text', { x: x, y: y, 'class': cls, 'aria-hidden': 'true' }, parent).textContent = t; }
+  // 段を色だけで分けない: 0 は枠だけ、1・2 は中の四角の大きさ、3 は塗りに点
+  function mark(parent, x, y, level) {
+    var s = G.size;
+    svgEl('rect', { x: x + 0.5, y: y + 0.5, width: s - 1, height: s - 1, rx: 2, 'class': 'g-frame' }, parent);
+    if (level === 1 || level === 2) {
+      var w = level === 1 ? 8 : 13, o = (s - w) / 2;
+      svgEl('rect', { x: x + o, y: y + o, width: w, height: w, rx: 1, 'class': 'g-fill' }, parent);
+    }
+    if (level === 3) {
+      svgEl('rect', { x: x, y: y, width: s, height: s, rx: 2, 'class': 'g-fill' }, parent);
+      svgEl('circle', { cx: x + s / 2, cy: y + s / 2, r: 2.5, 'class': 'g-dot' }, parent);
+    }
+  }
+  function renderGrid(days) {
+    var g = C.monthGrid(days), GT = T.grid;
+    el.grid.innerHTML = '';
+    el.grid.hidden = !g.years.length;
+    if (!g.years.length) return;
+    var cap = document.createElement('p'); cap.className = 'grid-caption'; cap.textContent = GT.caption; el.grid.appendChild(cap);
+    var W = G.label + 12 * G.pitch, H = G.head + g.items.length * G.pitch;
+    // 1 年 1 枚（期間が長くても横に伸びず、下に積む）
+    g.years.forEach(function (yr) {
+      var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, 'class': 'grid-year', role: 'group', 'aria-label': String(yr.year) }, el.grid);
+      svgText(svg, 0, 13, String(yr.year), 'g-year');
+      for (var m = 1; m <= 12; m++) svgText(svg, G.label + (m - 1) * G.pitch + G.size / 2, 13, String(m), 'g-month');
+      g.items.forEach(function (it, i) {
+        var y = G.head + i * G.pitch;
+        svgText(svg, 0, y + 13, GT.short[it], 'g-item');
+        yr.months.forEach(function (mo, j) {
+          if (!mo) return;   // 期間の外の月は升を置かない
+          var c = mo.cells[it];
+          mark(svgEl('g', { role: 'img', 'aria-label': GT.cell(yr.year, mo.month, GT.full[it], c.n) }, svg), G.label + j * G.pitch, y, c.level);
+        });
+      });
+    });
+    var lg = document.createElement('p'); lg.className = 'grid-legend'; lg.setAttribute('aria-hidden', 'true');
+    GT.legend.forEach(function (t, lv) {
+      var span = document.createElement('span');
+      mark(svgEl('svg', { viewBox: '0 0 18 18', width: 14, height: 14 }, span), 0, 0, lv);
+      span.appendChild(document.createTextNode(t));
+      lg.appendChild(span);
+    });
+    el.grid.appendChild(lg);
+  }
+
   // --- 結果を出す ---
 
   function render() {
     var r = state.res, s = r.summary;
     el.detail.hidden = false;
+    renderGrid(r.days);
     if (!s.dayCount) {
       text(el.result, '—');
       text(el.sub, T.noRecords);

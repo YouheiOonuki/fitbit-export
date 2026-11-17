@@ -43,6 +43,16 @@
         "@type": "Question",
         "name": "Can I import the CSV into Garmin or Apple Health?",
         "acceptedAnswer": { "@type": "Answer", "text": "No. The converter makes a CSV for spreadsheets and Markdown for notes. It does not create Garmin or Apple Health import files." }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I export hourly data?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. Step records are added up in 15-minute blocks as they are read, but the CSV and Markdown files have one value per day." }
+      },
+      {
+        "@type": "Question",
+        "name": "Does it export heart rate data?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Resting heart rate goes into the daily CSV, and average heart rate for each session into the exercise CSV. The minute-level heart rate files (heart_rate-YYYY-MM-DD.json) are not opened." }
       }
     ]
   }
@@ -124,8 +134,6 @@
       <p>Sleep goes into the daily CSV: start, end, minutes asleep and awake, sleep stages and sleep score.</p>
       <h3 id="weight">How do I export Fitbit weight data?</h3>
       <p>Weight goes into the daily CSV in kg or lb, with BMI and body fat when the export has them.</p>
-      <h3 id="heart-rate">How do I export Fitbit heart rate data?</h3>
-      <p>The daily CSV has resting heart rate, and the exercise CSV has average heart rate. Minute-level heart rate is not written.</p>
     </article>
 
     <article class="card content" id="faq">
@@ -137,6 +145,10 @@
         <dd>Google Takeout splits your data into many JSON and CSV files by type and date. The converter combines them into one table.</dd>
         <dt>Can I import the CSV into Garmin or Apple Health?</dt>
         <dd>No. The converter makes a CSV for spreadsheets and Markdown for notes. It does not create Garmin or Apple Health import files.</dd>
+        <dt id="hourly">Can I export hourly data?</dt>
+        <dd>No. Step records are added up in 15-minute blocks as they are read, but the CSV and Markdown files have one value per day.</dd>
+        <dt id="heart-rate">Does it export heart rate data?</dt>
+        <dd>Resting heart rate goes into the daily CSV, and average heart rate for each session into the exercise CSV. The minute-level heart rate files (heart_rate-YYYY-MM-DD.json) are not opened.</dd>
       </dl>
     </article>
 
@@ -156,6 +168,7 @@
       <ul>
         <li><time datetime="2026-09-25">2026-09-25</time> English version published</li>
         <li><time datetime="2026-11-04">2026-11-04</time> Questions added</li>
+        <li><time datetime="2026-11-17">2026-11-17</time> Records-by-month grid; 2 questions added</li>
       </ul>
     </article>
 

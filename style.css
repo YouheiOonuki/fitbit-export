@@ -139,6 +139,20 @@ details.card.opt.about-tool > summary { white-space: normal; }   /* 長い summa
 details.about-tool h3 { margin: var(--sp-4) 0 var(--sp-1); }
 details.about-tool ul { padding-left: 1.2rem; margin: var(--sp-1) 0 var(--sp-2); }
 
+/* 項目 × 月の升目（main.js が SVG を描く。1 年 1 枚を下に積むので横にあふれない。Q-317） */
+.grid { margin: var(--sp-3) 0; }
+.grid-caption { font-size: var(--fs-s); font-weight: 700; }
+.grid-year { display: block; width: 100%; max-width: 26rem; height: auto; margin-top: var(--sp-2); }
+.grid-year text { font-size: 11px; fill: var(--text); }
+.grid-year .g-year { font-weight: 700; }
+.grid-year .g-month { text-anchor: middle; fill: var(--muted); }
+.g-frame { fill: none; stroke: var(--input-border); stroke-width: 1; }
+.g-fill { fill: var(--accent); }
+.g-dot { fill: var(--on-accent); }
+.grid-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-s); color: var(--muted); margin-top: var(--sp-2); }
+.grid-legend span { display: inline-flex; align-items: center; gap: var(--sp-1); }
+@media (forced-colors: active) { .g-frame { stroke: CanvasText; } .g-fill { fill: CanvasText; } .g-dot { fill: Canvas; } .grid-year text { fill: CanvasText; } }
+
 /* フッター */
 .app-footer { text-align: center; padding: var(--sp-4); font-size: var(--fs-s); color: var(--muted); border-top: 1px solid var(--border); margin-top: var(--sp-2); }
 .footer-nav ul { list-style: none; display: flex; justify-content: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); margin-bottom: var(--sp-2); }
