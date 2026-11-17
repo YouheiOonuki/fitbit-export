@@ -46,11 +46,6 @@
       },
       {
         "@type": "Question",
-        "name": "Can I export hourly data?",
-        "acceptedAnswer": { "@type": "Answer", "text": "No. Step records are added up in 15-minute blocks as they are read, but the CSV and Markdown files have one value per day." }
-      },
-      {
-        "@type": "Question",
         "name": "Does it export heart rate data?",
         "acceptedAnswer": { "@type": "Answer", "text": "Resting heart rate goes into the daily CSV, and average heart rate for each session into the exercise CSV. The minute-level heart rate files (heart_rate-YYYY-MM-DD.json) are not opened." }
       }
@@ -97,7 +92,7 @@
 
     <article class="card content" id="export">
       <h2>How to export Fitbit data</h2>
-      <p>If you sign in with a Google Account, open Google Takeout (takeout.google.com), select Google Health and choose .zip as the file type. Google emails you a download link when the export is ready.</p>
+      <p>If you sign in with a Google Account, open Google Takeout (takeout.google.com), select Google Health and choose .zip as the file type.</p>
       <details>
         <summary>More details</summary>
         <ul>
@@ -114,10 +109,9 @@
       <h2>Which files are read, and how times and units are handled</h2>
       <p>The converter reads only the sleep, sleep score, steps, resting heart rate, weight and exercise files. It finds them by file name, so folder names do not matter.</p>
       <ul>
-        <li>Step and exercise times are recorded in UTC. They are split into days in the time zone you choose (default: this device).</li>
+        <li>Step and exercise times are recorded in UTC. They are split into days in the time zone you choose.</li>
         <li>Weight in weight-YYYY-MM-DD.json is read as pounds. If weight.csv (grams) is also there, the two are compared to decide. The output can be kg or lb.</li>
         <li>If a day appears in both formats, the JSON in Global Export Data is used.</li>
-        <li>Dates are written as YYYY-MM-DD, and times in 24-hour format.</li>
       </ul>
       <p class="small">Sources: Google Health Help and public parsers. Last checked <time datetime="2026-09-25">2026-09-25</time>.</p>
       <details>
@@ -145,8 +139,6 @@
         <dd>Google Takeout splits your data into many JSON and CSV files by type and date. The converter combines them into one table.</dd>
         <dt>Can I import the CSV into Garmin or Apple Health?</dt>
         <dd>No. The converter makes a CSV for spreadsheets and Markdown for notes. It does not create Garmin or Apple Health import files.</dd>
-        <dt id="hourly">Can I export hourly data?</dt>
-        <dd>No. Step records are added up in 15-minute blocks as they are read, but the CSV and Markdown files have one value per day.</dd>
         <dt id="heart-rate">Does it export heart rate data?</dt>
         <dd>Resting heart rate goes into the daily CSV, and average heart rate for each session into the exercise CSV. The minute-level heart rate files (heart_rate-YYYY-MM-DD.json) are not opened.</dd>
       </dl>
@@ -169,6 +161,7 @@
         <li><time datetime="2026-09-25">2026-09-25</time> English version published</li>
         <li><time datetime="2026-11-04">2026-11-04</time> Questions added</li>
         <li><time datetime="2026-11-17">2026-11-17</time> Records-by-month grid; 2 questions added</li>
+        <li><time datetime="2026-11-18">2026-11-18</time> Deletion note rechecked; hourly question removed</li>
       </ul>
     </article>
 
