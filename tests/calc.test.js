@@ -233,7 +233,7 @@ test('toMarkdownFiles: 1 日 1 ファイル（frontmatter）と 1 か月 1 フ�
 test('constants: 出典ごとに source・url・確認日がある', () => {
   assert.match(K.CHECKED, /^\d{4}-\d{2}-\d{2}$/);
   for (const [key, c] of Object.entries(K.SOURCES)) {
-    assert.ok(c.label && c.value && c.source && /^https:\/\//.test(c.url) && c.checked === K.CHECKED, key);
+    assert.ok(c.label && c.value && c.source && /^https:\/\//.test(c.url) && /^\d{4}-\d{2}-\d{2}$/.test(c.checked) && c.checked >= K.CHECKED, key);
     assert.ok(['official', 'public-code'].includes(c.kind), key);
   }
 });

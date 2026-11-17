@@ -23,12 +23,12 @@
     },
     migration: {
       label: 'Fitbit アカウントの終了',
-      value: '2026-05-19 以降は Fitbit アカウントでログインできない。2026-07-15 にデータの削除処理が始まる',
+      value: '2026-05-19 以降は Fitbit アカウントでログインできない。Google は 2026 年 7 月 15 日から削除の処理を始めると告知した',
       source: 'Google Health ヘルプ「Fitbit アカウントを Google アカウントに移行する方法」',
       url: 'https://support.google.com/googlehealth/answer/14237024?hl=ja',
-      checked: CHECKED,
+      checked: '2026-11-18',   // 削除の文は、この日にページを開いて確かめた（告知のまま。始まったとは書いていない）
       kind: 'official',
-      en: { label: "End of Fitbit accounts", value: "From 2026-05-19 you cannot sign in with a Fitbit account. Data deletion starts on 2026-07-15", source: "Google Health Help: How to move your Fitbit Account to a Google Account", url: "https://support.google.com/googlehealth/answer/14237024?hl=en" },
+      en: { label: "End of Fitbit accounts", value: "From 2026-05-19 you cannot sign in with a Fitbit account. Google announced that data deletion would begin on 2026-07-15", source: "Google Health Help: How to move your Fitbit Account to a Google Account", url: "https://support.google.com/googlehealth/answer/14237024?hl=en" },
     },
     takeout: {
       label: '書き出しファイルの形',
