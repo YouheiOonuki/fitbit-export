@@ -260,3 +260,77 @@ test('体重の出力の単位（英語の画面で選ぶ）: lb は丸める前
   assert.match(month, /\| Weight \(lb\) \|/);
   assert.match(month, /\| 2026-01-11 \| 1,500 \| 6:20 \| 81 \| 58 \| 154\.3 \|/);
 });
+
+// 項目 × 月の升目（Q-317）。days は aggregate の days と同じ形（値の無い項目はキーが無い）
+function daysOf(from, n, fill) {
+  const out = [], t0 = Date.parse(from + 'T00:00:00Z');
+  for (let i = 0; i < n; i++) out.push(Object.assign({ date: new Date(t0 + i * 86400000).toISOString().slice(0, 10) }, fill(i)));
+  return out;
+}
+
+test('monthGrid: 0 件は年が無い', () => {
+  assert.deepEqual(C.monthGrid([]), { items: ['sleep', 'score', 'steps', 'rhr', 'weight', 'exercise'], years: [] });
+  assert.deepEqual(C.monthGrid(null).years, []);
+});
+
+test('monthGrid: 1 か月。期間の外の月は null、段は 0 日・半分未満・半分以上・全部', () => {
+  // 2026-03-01〜03-31 の 31 日: 歩数は全部、睡眠は 16 日（半分以上）、心拍は 15 日（半分未満）、体重は 0 日、運動は 1 日
+  const days = daysOf('2026-03-01', 31, (i) => Object.assign({ steps: 5000 }, i < 16 ? { sleepMin: 400 } : {}, i < 15 ? { rhr: 60 } : {}, i === 3 ? { exCount: 1 } : {}));
+  const g = C.monthGrid(days);
+  assert.equal(g.years.length, 1);
+  const ms = g.years[0].months;
+  assert.equal(ms.length, 12);
+  assert.deepEqual(ms.map((m) => m && m.month), [null, null, 3, null, null, null, null, null, null, null, null, null]);
+  const c = ms[2].cells;
+  assert.equal(ms[2].span, 31);
+  assert.deepEqual(c.steps, { n: 31, level: 3 });
+  assert.deepEqual(c.sleep, { n: 16, level: 2 });
+  assert.deepEqual(c.rhr, { n: 15, level: 1 });
+  assert.deepEqual(c.weight, { n: 0, level: 0 });
+  assert.deepEqual(c.exercise, { n: 1, level: 1 });
+  assert.deepEqual(c.score, { n: 0, level: 0 });
+});
+
+test('monthGrid: 最初と最後の月は期間に入る日数が分母', () => {
+  // 3-20〜4-05: 3 月は 12 日、4 月は 5 日。全部の日に歩数があれば両方とも全部（3）
+  const g = C.monthGrid(daysOf('2026-03-20', 17, () => ({ steps: 1 })));
+  const [mar, apr] = [g.years[0].months[2], g.years[0].months[3]];
+  assert.equal(mar.span, 12); assert.equal(apr.span, 5);
+  assert.equal(mar.cells.steps.level, 3); assert.equal(apr.cells.steps.level, 3);
+});
+
+test('monthGrid: うるう年の 2 月は 29 日が分母', () => {
+  const all = C.monthGrid(daysOf('2028-02-01', 29, () => ({ weight: 60 })), '2028-02-01', '2028-02-29');
+  assert.equal(all.years[0].months[1].span, 29);
+  assert.deepEqual(all.years[0].months[1].cells.weight, { n: 29, level: 3 });
+  // 28 日だけ値があると、全部ではない（平年の 2 月の日数と取り違えない）
+  const d = daysOf('2028-02-01', 29, (i) => (i < 28 ? { weight: 60 } : {}));
+  assert.deepEqual(C.monthGrid(d, '2028-02-01', '2028-02-29').years[0].months[1].cells.weight, { n: 28, level: 2 });
+  // 平年（2027）は 28 日
+  assert.equal(C.monthGrid(daysOf('2027-02-01', 28, () => ({ weight: 60 }))).years[0].months[1].span, 28);
+});
+
+test('monthGrid: 6 年の期間は 1 年 1 段で 6 段（横に伸ばさない）', () => {
+  const days = [{ date: '2020-03-15', steps: 1 }, { date: '2023-07-01', rhr: 55 }, { date: '2025-11-02', exCount: 2 }];
+  const g = C.monthGrid(days);
+  assert.deepEqual(g.years.map((y) => y.year), [2020, 2021, 2022, 2023, 2024, 2025]);
+  for (const y of g.years) assert.equal(y.months.length, 12);
+  assert.equal(g.years[0].months[1], null);                    // 2020-02 は期間の外
+  assert.equal(g.years[0].months[2].span, 17);                 // 2020-03-15〜31
+  assert.equal(g.years[5].months[10].span, 2);                 // 2025-11-01〜02
+  assert.equal(g.years[5].months[11], null);                   // 2025-12 は期間の外
+  assert.equal(g.years[4].months[1].span, 29);                 // 2024 はうるう年
+  assert.deepEqual(g.years[3].months[6].cells.rhr, { n: 1, level: 1 });
+  assert.deepEqual(g.years[5].months[10].cells.exercise, { n: 1, level: 2 });   // 2 日のうち 1 日 = 半分以上
+  assert.equal(g.years.reduce((t, y) => t + y.months.filter(Boolean).length, 0), 69);   // 2020-03〜2025-11
+});
+
+test('monthGrid: 見本のデータで、升の日数が項目ごとの日数と合う', async () => {
+  const res = await load(C.makeSample());
+  const g = C.monthGrid(res.days);
+  const sum = (it) => g.years.reduce((t, y) => t + y.months.filter(Boolean).reduce((u, m) => u + m.cells[it].n, 0), 0);
+  const k = res.summary.counts;
+  assert.equal(sum('steps'), k.steps); assert.equal(sum('sleep'), k.sleep); assert.equal(sum('score'), k.score);
+  assert.equal(sum('rhr'), k.rhr); assert.equal(sum('weight'), k.weight);
+  assert.equal(sum('exercise'), res.days.filter((d) => d.exCount).length);
+});

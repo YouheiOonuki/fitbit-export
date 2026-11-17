@@ -422,6 +422,51 @@
     return info;
   }
 
+  // ---------- 項目 × 月の升目（画面の図。Q-317） ----------
+  // [項目, 日ごとの行で値を見るキー]。並びは画面の行の順
+  var GRID_ITEMS = [['sleep', 'sleepMin'], ['score', 'score'], ['steps', 'steps'], ['rhr', 'rhr'], ['weight', 'weight'], ['exercise', 'exCount']];
+  function daysInMonth(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+
+  /**
+   * 月ごとに、項目ごとの値のあった日数と段を出す。期間（from〜to）の外の月は null
+   * 分母はその月のうち期間に入る日数（最初と最後の月は途中から・途中まで）
+   * 段: 0 = 0 日、1 = 半分未満、2 = 半分以上（全部ではない）、3 = 期間に入る日の全部
+   * @param {object[]} days aggregate の days（日付の昇順）
+   * @param {string} [from] 'YYYY-MM-DD'。省けば days の最初の日
+   * @param {string} [to] 'YYYY-MM-DD'。省けば days の最後の日
+   * @returns {{items:string[], years:Array<{year:number, months:Array<null|{month:number, span:number, cells:Object<string,{n:number, level:number}>}>}>}}
+   */
+  function monthGrid(days, from, to) {
+    var items = GRID_ITEMS.map(function (x) { return x[0]; });
+    if (!days || !days.length) return { items: items, years: [] };
+    from = from || days[0].date; to = to || days[days.length - 1].date;
+    var counts = new Map();
+    days.forEach(function (d) {
+      if (d.date < from || d.date > to) return;
+      var k = d.date.slice(0, 7), c = counts.get(k);
+      if (!c) { c = {}; items.forEach(function (it) { c[it] = 0; }); counts.set(k, c); }
+      GRID_ITEMS.forEach(function (x) { if (d[x[1]] != null) c[x[0]]++; });
+    });
+    var fy = +from.slice(0, 4), fm = +from.slice(5, 7), ty = +to.slice(0, 4), tm = +to.slice(5, 7);
+    var years = [];
+    for (var y = fy; y <= ty; y++) {
+      var months = [];
+      for (var m = 1; m <= 12; m++) {
+        if ((y === fy && m < fm) || (y === ty && m > tm)) { months.push(null); continue; }
+        var first = y === fy && m === fm ? +from.slice(8, 10) : 1;
+        var last = y === ty && m === tm ? +to.slice(8, 10) : daysInMonth(y, m);
+        var span = last - first + 1, c = counts.get(y + '-' + pad(m)), cells = {};
+        items.forEach(function (it) {
+          var n = c ? c[it] : 0;
+          cells[it] = { n: n, level: n === 0 ? 0 : n >= span ? 3 : n * 2 >= span ? 2 : 1 };
+        });
+        months.push({ month: m, span: span, cells: cells });
+      }
+      years.push({ year: y, months: months });
+    }
+    return { items: items, years: years };
+  }
+
   // ---------- 書き出し ----------
   // [キー, 日本語の列名, 英語の列名（Markdown の frontmatter のキーと同じ）]
   var DAILY_COLS = [
@@ -636,7 +681,7 @@
     parseUs: parseUs, parseIso: parseIso, parseOffset: parseOffset, parseCsv: parseCsv, isValidZone: isValidZone, zoneShifter: zoneShifter,
     classify: classify, newRaw: newRaw, parseInto: parseInto, importSources: importSources, aggregate: aggregate,
     toCsv: toCsv, toMarkdownFiles: toMarkdownFiles, dayNote: dayNote, monthNote: monthNote, makeSample: makeSample,
-    weightIn: weightIn, DAILY_COLS: DAILY_COLS, EXERCISE_COLS: EXERCISE_COLS,
+    weightIn: weightIn, DAILY_COLS: DAILY_COLS, EXERCISE_COLS: EXERCISE_COLS, monthGrid: monthGrid,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Calc = api;
