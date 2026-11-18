@@ -110,11 +110,14 @@
     <article class="card content" id="time">
       <h2>Which files are read, and how times and units are handled</h2>
       <p>The converter reads only the sleep, sleep score, steps, resting heart rate, weight and exercise files. It finds them by file name, so folder names do not matter.</p>
-      <ul>
-        <li>Step and exercise times are recorded in UTC. They are split into days in the time zone you choose.</li>
-        <li>Weight in weight-YYYY-MM-DD.json is read as pounds. If weight.csv (grams) is also there, the two are compared to decide. The output can be kg or lb.</li>
-        <li>If a day appears in both formats, the JSON in Global Export Data is used.</li>
-      </ul>
+      <details>
+        <summary>Times, units and duplicates</summary>
+        <ul>
+          <li>Step and exercise times are recorded in UTC. They are split into days in the time zone you choose.</li>
+          <li>Weight in weight-YYYY-MM-DD.json is read as pounds. If weight.csv (grams) is also there, the two are compared to decide. The output can be kg or lb.</li>
+          <li>If a day appears in both formats, the JSON in Global Export Data is used.</li>
+        </ul>
+      </details>
       <p class="small">Sources: Google Health Help and public parsers. Last checked <time datetime="2026-09-25">2026-09-25</time>.</p>
       <details>
         <summary>CSV columns</summary>

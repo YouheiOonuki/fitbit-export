@@ -109,11 +109,14 @@
     <article class="card content" id="time">
       <h2>読むファイルと時刻・単位の扱い</h2>
       <p>読むのは睡眠・睡眠スコア・歩数・安静時心拍数・体重・運動のファイルだけで、フォルダ名は見ずにファイル名で探します。</p>
-      <ul>
-        <li>歩数と運動の時刻は UTC で記録されているので、選んだタイムゾーンで日付を分けます。</li>
-        <li>weight-日付.json の体重はポンドとみなして kg に直します。weight.csv（グラム）があれば比べて決めます。</li>
-        <li>両方の形がある日は Global Export Data の JSON を使います。</li>
-      </ul>
+      <details>
+        <summary>時刻・単位・重なった日</summary>
+        <ul>
+          <li>歩数と運動の時刻は UTC で記録されているので、選んだタイムゾーンで日付を分けます。</li>
+          <li>weight-日付.json の体重はポンドとみなして kg に直します。weight.csv（グラム）があれば比べて決めます。</li>
+          <li>両方の形がある日は Global Export Data の JSON を使います。</li>
+        </ul>
+      </details>
       <p class="small">形式の根拠: Google Health ヘルプと公開の解析コード。最終確認日 <time datetime="2026-09-25">2026年9月25日</time>。</p>
       <details>
         <summary>読むファイルの名前と出典</summary>
