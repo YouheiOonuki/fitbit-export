@@ -467,6 +467,53 @@
     return { items: items, years: years };
   }
 
+  // ---------- 升目の月を押して書き出す期間を選ぶ（Q-559）。値を持つのは期間の欄（#from・#to）だけで、ここは欄に入れる値を出す ----------
+  function monthKey(y, m) { return y + '-' + pad(m); }
+  function monthFirst(y, m) { return monthKey(y, m) + '-01'; }
+  function monthLast(y, m) { return monthKey(y, m) + '-' + pad(daysInMonth(y, m)); }
+  /**
+   * 月の升を押した後の期間の欄の値。1 つ目で始めをその月の 1 日に（終わりは空 = 最後まで）、
+   * 2 つ目で終わりをその月の末日に（先の月より前なら入れ替える）。2 つ目の後は pick が null に戻り、3 つ目は選び直し
+   * @param {null|{year:number, month:number}} pick 先に押した月（まだなら null）
+   * @returns {{from:string, to:string, pick:null|{year:number, month:number}}}
+   */
+  function pickMonth(pick, year, month) {
+    if (!pick) return { from: monthFirst(year, month), to: '', pick: { year: year, month: month } };
+    var a = pick, b = { year: year, month: month };
+    if (b.year * 12 + b.month < a.year * 12 + a.month) { var t = a; a = b; b = t; }
+    return { from: monthFirst(a.year, a.month), to: monthLast(b.year, b.month), pick: null };
+  }
+  /** 期間の欄（空は端まで）がその月に掛かるか。欄が両方空なら掛からない（枠を出さない） */
+  function monthInRange(year, month, from, to) {
+    if (!from && !to) return false;
+    return (!from || monthLast(year, month) >= from) && (!to || monthFirst(year, month) <= to);
+  }
+  /** monthGrid の結果から、押せる月（どれかの項目に記録の在る月）を古い順に "YYYY-MM" で */
+  function gridMonths(g) {
+    var out = [];
+    g.years.forEach(function (yr) {
+      yr.months.forEach(function (mo) {
+        if (mo && g.items.some(function (it) { return mo.cells[it].n > 0; })) out.push(monthKey(yr.year, mo.month));
+      });
+    });
+    return out;
+  }
+  /**
+   * 升目の中のフォーカスの動き。← → は前・次の押せる月（年をまたぐ）、↑ ↓ は前・次の年のうち同じ月を押せるいちばん近い年。無ければ動かない
+   * @param {string[]} keys gridMonths の返り
+   * @param {string} cur 今の月 "YYYY-MM"
+   * @param {'left'|'right'|'up'|'down'} dir
+   */
+  function moveMonth(keys, cur, dir) {
+    var i = keys.indexOf(cur);
+    if (i < 0) return keys.length ? keys[0] : cur;
+    if (dir === 'left') return i > 0 ? keys[i - 1] : cur;
+    if (dir === 'right') return i < keys.length - 1 ? keys[i + 1] : cur;
+    var m = cur.slice(5), up = dir === 'up';
+    for (var j = i + (up ? -1 : 1); j >= 0 && j < keys.length; j += up ? -1 : 1) if (keys[j].slice(5) === m) return keys[j];
+    return cur;
+  }
+
   // ---------- 書き出し ----------
   // [キー, 日本語の列名, 英語の列名（Markdown の frontmatter のキーと同じ）]
   var DAILY_COLS = [
@@ -769,6 +816,7 @@
     classify: classify, newRaw: newRaw, parseInto: parseInto, importSources: importSources, aggregate: aggregate,
     toCsv: toCsv, toMarkdownFiles: toMarkdownFiles, dayNote: dayNote, monthNote: monthNote, makeSample: makeSample,
     weightIn: weightIn, DAILY_COLS: DAILY_COLS, EXERCISE_COLS: EXERCISE_COLS, monthGrid: monthGrid,
+    pickMonth: pickMonth, monthInRange: monthInRange, gridMonths: gridMonths, moveMonth: moveMonth,
     dailyCols: dailyCols, NUM_KEYS: NUM_KEYS, scatterPoints: scatterPoints, scatterDefault: scatterDefault, axisTicks: axisTicks,
     MONTH_AVG: MONTH_AVG, yearMonthAvg: yearMonthAvg, yearMonthDefault: yearMonthDefault, hm: hm, fmtInt: fmtInt,
   };

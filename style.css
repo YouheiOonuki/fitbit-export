@@ -150,9 +150,13 @@ details.about-tool ul { padding-left: 1.2rem; margin: var(--sp-1) 0 var(--sp-2);
 .g-frame { fill: none; stroke: var(--input-border); stroke-width: 1; }
 .g-fill { fill: var(--accent); }
 .g-dot { fill: var(--on-accent); }
+/* 月の列を押して書き出す期間を選ぶ（Q-559）。押す所は列ごとの透明な四角、選んだ期間は 3 px の枠（色の濃さの段は変えない） */
+.g-hit { fill: transparent; cursor: pointer; }
+.g-hit:focus:not(:focus-visible) { outline: none; }   /* 指で押した後は枠だけ（キーボードの時は共通の輪） */
+.g-range { fill: none; stroke: var(--text); stroke-width: 3; vector-effect: non-scaling-stroke; }
 .grid-legend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-s); color: var(--muted); margin-top: var(--sp-2); }
 .grid-legend span { display: inline-flex; align-items: center; gap: var(--sp-1); }
-@media (forced-colors: active) { .g-frame { stroke: CanvasText; } .g-fill { fill: CanvasText; } .g-dot { fill: Canvas; } .grid-year text { fill: CanvasText; } }
+@media (forced-colors: active) { .g-frame { stroke: CanvasText; } .g-fill { fill: CanvasText; } .g-dot { fill: Canvas; } .grid-year text { fill: CanvasText; } .g-range { stroke: CanvasText; } }
 
 /* 2 つの列を 1 日 1 点で並べる図（main.js が描く。押す所は 44 px・間 8 px。Q-426） */
 .scatter { margin: var(--sp-3) 0; }
