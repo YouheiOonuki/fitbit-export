@@ -516,6 +516,54 @@
   }
   function cellValue(r, key, unit) { return key === 'weight' ? weightIn(r, unit) : r[key]; }
 
+  // ---------- 2 つの列を 1 日 1 点で並べる図（画面の図。Q-426） ----------
+  /** 日ごとの行のうち数の列のキー（DAILY_COLS の並び。日付・時刻・運動の種類の列を除く） */
+  var NUM_KEYS = DAILY_COLS.map(function (c) { return c[0]; })
+    .filter(function (k) { return ['date', 'sleepStart', 'sleepEnd', 'exNames'].indexOf(k) < 0; });
+
+  /**
+   * 横と縦の列の両方に値のある日だけを点に（日付の昇順。値は CSV のその行と同じ: 体重は出力の単位）
+   * @returns {Array<{date:string, x:number, y:number}>}
+   */
+  function scatterPoints(days, xKey, yKey, unit) {
+    var out = [];
+    (days || []).forEach(function (r) {
+      var x = cellValue(r, xKey, unit), y = cellValue(r, yKey, unit);
+      if (x != null && y != null) out.push({ date: r.date, x: x, y: y });
+    });
+    return out;
+  }
+
+  /** 既定の 2 列: 値のある日数の多い順（同じ数なら DAILY_COLS の並びの早い方）。[横, 縦] */
+  function scatterDefault(days) {
+    var n = {};
+    NUM_KEYS.forEach(function (k) { n[k] = 0; });
+    (days || []).forEach(function (r) { NUM_KEYS.forEach(function (k) { if (r[k] != null) n[k]++; }); });
+    var order = NUM_KEYS.slice().sort(function (a, b) { return n[b] - n[a] || NUM_KEYS.indexOf(a) - NUM_KEYS.indexOf(b); });
+    return [order[0], order[1]];
+  }
+
+  /**
+   * 軸の目盛り: 最小・最大と、その間の 2〜3 個（1・2・2.5・5 × 10 の累乗の倍数。端から幅の 12% 未満のものは置かない）
+   * 間の目盛りが 2 個に届かない幅では、3 等分（幅の 1/100 の桁で丸める）
+   * @returns {number[]} 昇順。最小 = 最大なら 1 個
+   */
+  function axisTicks(min, max) {
+    if (!(max > min)) return [min];
+    var span = max - min, gap = span * 0.12, e0 = Math.floor(Math.log10(span)), mults = [1, 2, 2.5, 5];
+    for (var e = e0 - 2; e <= e0 + 1; e++) {
+      for (var i = 0; i < mults.length; i++) {
+        var step = mults[i] * Math.pow(10, e), dec = Math.max(0, -e + (mults[i] === 2.5 ? 1 : 0)), inner = [];
+        for (var k = Math.ceil((min + gap) / step); k * step <= max - gap; k++) inner.push(+(k * step).toFixed(dec));
+        if (inner.length > 3) continue;
+        if (inner.length >= 2) return [min].concat(inner, [max]);
+        var d = Math.max(0, -Math.floor(Math.log10(span / 100)));
+        return [min, +(min + span / 3).toFixed(d), +(min + span * 2 / 3).toFixed(d), max];
+      }
+    }
+    return [min, max];
+  }
+
   function inRange(d, from, to) { return (!from || d >= from) && (!to || d <= to); }
   function csvCell(v) {
     if (v == null) return '';
@@ -682,6 +730,7 @@
     classify: classify, newRaw: newRaw, parseInto: parseInto, importSources: importSources, aggregate: aggregate,
     toCsv: toCsv, toMarkdownFiles: toMarkdownFiles, dayNote: dayNote, monthNote: monthNote, makeSample: makeSample,
     weightIn: weightIn, DAILY_COLS: DAILY_COLS, EXERCISE_COLS: EXERCISE_COLS, monthGrid: monthGrid,
+    dailyCols: dailyCols, NUM_KEYS: NUM_KEYS, scatterPoints: scatterPoints, scatterDefault: scatterDefault, axisTicks: axisTicks,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Calc = api;

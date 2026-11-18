@@ -10,11 +10,12 @@
   var T = window.Text.TEXT[EN ? 'en' : 'ja'];
   function $(id) { return document.getElementById(id); }
   var el = {
-    result: $('result'), sub: $('result-sub'), grid: $('grid'), dlRow: $('dl-row'), detail: $('detail'), detailTable: $('detail-table'), notes: $('notes'), preview: $('preview'),
+    result: $('result'), sub: $('result-sub'), grid: $('grid'), scatter: $('scatter'), dlRow: $('dl-row'), detail: $('detail'), detailTable: $('detail-table'), notes: $('notes'), preview: $('preview'),
     bom: $('bom'), lang: $('lang'), mdUnit: $('md-unit'), from: $('from'), to: $('to'), tz: $('tz'), wunit: $('wunit'),
     wout: $('wout'),   // 出力の体重の単位（英語の画面だけ。日本語の画面は kg）
   };
-  var state = { raw: null, res: null, errors: [], skipped: 0, busy: false };
+  // sx・sy: 図の横と縦の列（null なら記録から決まる既定）。sel: 図で選んだ日の日付
+  var state = { raw: null, res: null, errors: [], skipped: 0, busy: false, sx: null, sy: null, sel: null };
 
   // --- タイムゾーンの選択肢（既定はこの端末の設定） ---
   var here = 'UTC';
@@ -96,12 +97,125 @@
     el.grid.appendChild(lg);
   }
 
+  // --- 2 つの列を 1 日 1 点で並べる図（Q-426。点の並びと既定の列は calc.js の scatterPoints・scatterDefault） ---
+  var SC = { w: 320, h: 230, l: 46, r: 10, t: 16, b: 22, hit: 18 };   // viewBox の幅・高さ、描く枠の左右上下の余白、点を押したとみなす距離
+  function renderScatter(days) {
+    var ST = T.scatter, wu = outOpts().weightOut, keys = C.NUM_KEYS, box = el.scatter;
+    var names = {};
+    C.dailyCols(wu).forEach(function (c) { names[c[0]] = c[ST.col]; });
+    // 列ごとの、値のある日の印（押す所の disabled を決める）
+    var has = {};
+    keys.forEach(function (k) { has[k] = days.map(function (r) { return (k === 'weight' ? C.weightIn(r, wu) : r[k]) != null; }); });
+    function pairN(a, b) { var n = 0, A = has[a], B = has[b]; for (var i = 0; i < A.length; i++) if (A[i] && B[i]) n++; return n; }
+    var any = false;
+    for (var i = 0; i < keys.length && !any; i++) for (var j = i + 1; j < keys.length && !any; j++) any = pairN(keys[i], keys[j]) >= 2;
+    box.innerHTML = '';
+    box.hidden = !any;
+    if (!any) return;
+    if (!state.sx || !state.sy) { var d0 = C.scatterDefault(days); state.sx = d0[0]; state.sy = d0[1]; }
+    var sx = state.sx, sy = state.sy;
+
+    // 横と縦の押す所（字は列の名前。同じ列どうしと、点が 2 つ未満になる組は押せない）。図の下に置く（図を先に。Q-430）
+    var rows = [];
+    [0, 1].forEach(function (axis) {
+      var row = document.createElement('div'); row.className = 'sc-axis';
+      row.setAttribute('role', 'group'); row.setAttribute('aria-label', ST.label[axis]);
+      var head = document.createElement('span'); head.className = 'sc-axis-name'; head.textContent = ST.axis[axis]; row.appendChild(head);
+      keys.forEach(function (k) {
+        var other = axis ? sx : sy, b = document.createElement('button');
+        b.type = 'button'; b.className = 'sc-btn'; b.textContent = names[k];
+        b.setAttribute('aria-pressed', String(k === (axis ? sy : sx)));
+        b.disabled = k === other || pairN(k, other) < 2;
+        b.addEventListener('click', function () {
+          if (axis) state.sy = k; else state.sx = k;
+          renderScatter(days);
+          var again = box.querySelectorAll('.sc-axis')[axis].querySelector('[aria-pressed="true"]');
+          if (again) again.focus();
+        });
+        row.appendChild(b);
+      });
+      rows.push(row);
+    });
+
+    var pts = C.scatterPoints(days, sx, sy, wu);
+    var svg = svgEl('svg', { viewBox: '0 0 ' + SC.w + ' ' + SC.h, 'class': 'scatter-svg', role: 'img', tabindex: '0', 'aria-label': names[sx] + ' × ' + names[sy] }, box);
+    var line = document.createElement('p'); line.className = 'sc-read'; line.setAttribute('aria-live', 'polite'); box.appendChild(line);
+    rows.forEach(function (row) { box.appendChild(row); });
+    var x0 = SC.l, x1 = SC.w - SC.r, y0 = SC.h - SC.b, y1 = SC.t;
+    function range(k) {
+      var lo = Infinity, hi = -Infinity;
+      pts.forEach(function (p) { if (p[k] < lo) lo = p[k]; if (p[k] > hi) hi = p[k]; });
+      return pts.length ? [lo, hi] : [0, 1];
+    }
+    var rx = range('x'), ry = range('y');
+    // 最小 = 最大の列は、その値を真ん中に
+    function scale(r, a, b) { var lo = r[0], hi = r[1]; if (hi === lo) { lo -= 1; hi += 1; } return function (v) { return a + (v - lo) / (hi - lo) * (b - a); }; }
+    var fx = scale(rx, x0, x1), fy = scale(ry, y0, y1);
+    svgEl('line', { x1: x0, y1: y0, x2: x1, y2: y0, 'class': 's-axis' }, svg);
+    svgEl('line', { x1: x0, y1: y0, x2: x0, y2: y1, 'class': 's-axis' }, svg);
+    if (pts.length) {
+      C.axisTicks(rx[0], rx[1]).forEach(function (v, i, a) {
+        var x = fx(v), end = a.length > 1 && i === a.length - 1;
+        svgEl('line', { x1: x, y1: y0, x2: x, y2: y0 + 3, 'class': 's-axis' }, svg);
+        svgText(svg, x, y0 + 14, String(v), 's-tick' + (end ? ' s-end' : ''));
+      });
+      C.axisTicks(ry[0], ry[1]).forEach(function (v) {
+        var y = fy(v);
+        svgEl('line', { x1: x0 - 3, y1: y, x2: x0, y2: y, 'class': 's-axis' }, svg);
+        svgText(svg, x0 - 5, y + 3.5, String(v), 's-tick s-y');
+      });
+    }
+    // 点（薄い点の重なりで濃さが出る）。1 本の path にまとめる
+    var d = [];
+    pts.forEach(function (p) { var x = fx(p.x), y = fy(p.y); d.push('M' + (x - 2.5).toFixed(1) + ' ' + y.toFixed(1) + 'a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0'); });
+    if (d.length) svgEl('path', { d: d.join(''), 'class': 's-dot' }, svg);
+    var ring = svgEl('circle', { r: 5, 'class': 's-sel', visibility: 'hidden' }, svg);
+
+    // 選んだ日の 1 行（日付と 2 つの値。CSV のその行と同じ数・同じ書き方）
+    var cur = -1;
+    function show(idx) {
+      var p = pts[idx];
+      cur = p ? idx : -1;
+      if (!p) { state.sel = null; ring.setAttribute('visibility', 'hidden'); line.textContent = ''; return; }
+      state.sel = p.date;
+      ring.setAttribute('cx', fx(p.x)); ring.setAttribute('cy', fy(p.y)); ring.setAttribute('visibility', 'visible');
+      line.textContent = p.date + ST.sep + names[sx] + ' ' + String(p.x) + ST.sep + names[sy] + ' ' + String(p.y);
+    }
+    var keep = -1;
+    if (state.sel) for (var q = 0; q < pts.length; q++) if (pts[q].date === state.sel) { keep = q; break; }
+    show(keep);
+    svg.addEventListener('click', function (e) {
+      var m = svg.getScreenCTM(); if (!m) return;
+      var pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; pt = pt.matrixTransform(m.inverse());
+      var best = -1, bd = SC.hit * SC.hit;
+      pts.forEach(function (p, i) { var dx = fx(p.x) - pt.x, dy = fy(p.y) - pt.y, dd = dx * dx + dy * dy; if (dd <= bd) { bd = dd; best = i; } });
+      if (best >= 0) show(best);
+    });
+    // ← → で日付の順に 1 日ずつ。Shift と ← → で 7 日（7 日先・前の日に点が無ければ、それより先・前でいちばん近い点）
+    function addDays(date, n) { var t = new Date(date + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
+    svg.addEventListener('keydown', function (e) {
+      if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || !pts.length) return;
+      e.preventDefault();
+      var fwd = e.key === 'ArrowRight', next;
+      if (cur < 0) next = fwd ? 0 : pts.length - 1;
+      else if (!e.shiftKey) next = Math.min(pts.length - 1, Math.max(0, cur + (fwd ? 1 : -1)));
+      else {
+        var target = addDays(pts[cur].date, fwd ? 7 : -7);
+        next = fwd ? pts.length - 1 : 0;
+        if (fwd) { for (var i = cur + 1; i < pts.length; i++) if (pts[i].date >= target) { next = i; break; } }
+        else { for (var j = cur - 1; j >= 0; j--) if (pts[j].date <= target) { next = j; break; } }
+      }
+      show(next);
+    });
+  }
+
   // --- 結果を出す ---
 
   function render() {
     var r = state.res, s = r.summary;
     el.detail.hidden = false;
     renderGrid(r.days);
+    renderScatter(r.days);
     if (!s.dayCount) {
       text(el.result, '—');
       text(el.sub, T.noRecords);
@@ -186,7 +300,7 @@
   function run(makeSources) {
     if (state.busy) return;
     state.busy = true;
-    state.errors = []; state.skipped = 0;
+    state.errors = []; state.skipped = 0; state.sx = state.sy = state.sel = null;
     text(el.result, T.reading); text(el.sub, '');
     el.dlRow.hidden = true;
     Promise.resolve().then(makeSources).then(function (sources) {

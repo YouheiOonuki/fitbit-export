@@ -65,6 +65,8 @@
         cell: function (y, m, item, n) { return y + ' 年 ' + m + ' 月 ' + item + ' ' + n + ' 日'; },
         legend: ['0 日', '半分未満', '半分以上', '全部の日'],
       },
+      // 2 つの列を 1 日 1 点で並べる図（Q-426）。列の名前は calc.js の DAILY_COLS（日本語の列名）。axis は押す所の行の頭の字（矢印。Q-430）、label はその行の読み上げの名前
+      scatter: { col: 1, axis: ['→', '↑'], label: ['横', '縦'], sep: '　' },
     },
 
     en: {
@@ -125,6 +127,8 @@
         cell: function (y, m, item, n) { return MONTHS[m - 1] + ' ' + y + ', ' + item + ': ' + pl(n, 'day', 'days'); },
         legend: ['No days', 'Under half', 'Half or more', 'Every day'],
       },
+      // 列の名前は DAILY_COLS の英語の列名（CSV の見出しと同じ）。行の頭は矢印、読み上げの名前は label（Q-430）
+      scatter: { col: 2, axis: ['→', '↑'], label: ['Horizontal axis', 'Vertical axis'], sep: ' · ' },
     },
   };
 

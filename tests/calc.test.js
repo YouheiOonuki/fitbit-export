@@ -334,3 +334,71 @@ test('monthGrid: 見本のデータで、升の日数が項目ごとの日数と
   assert.equal(sum('rhr'), k.rhr); assert.equal(sum('weight'), k.weight);
   assert.equal(sum('exercise'), res.days.filter((d) => d.exCount).length);
 });
+
+// ---------- 2 つの列を 1 日 1 点で並べる図（Q-426） ----------
+test('NUM_KEYS: 日ごとの行の数の列 15 個（日付・時刻・運動の種類を除く。DAILY_COLS の並び）', () => {
+  assert.deepEqual(C.NUM_KEYS, ['steps', 'sleepMin', 'awakeMin', 'inBedMin', 'deep', 'light', 'rem', 'napMin', 'score', 'rhr', 'weight', 'bmi', 'fat', 'exCount', 'exMin']);
+});
+
+test('scatterPoints: 点の数 = 両方の値がある行の数（列の組 3 通り・欠けのある日）', () => {
+  // 10 日: 歩数は全部、睡眠は偶数の日、心拍は 0〜5 日目、体重は 3 日目と 8 日目、7 日目は歩数も無い
+  const days = daysOf('2026-05-01', 10, (i) => Object.assign({}, i !== 7 ? { steps: 1000 + i } : {}, i % 2 === 0 ? { sleepMin: 400 + i } : {},
+    i <= 5 ? { rhr: 55 + i } : {}, i === 3 || i === 8 ? { weight: 60 + i / 10, weightKgRaw: 60 + i / 10 } : {}));
+  const both = (a, b) => days.filter((d) => d[a] != null && d[b] != null).length;
+  for (const [x, y] of [['steps', 'sleepMin'], ['sleepMin', 'rhr'], ['rhr', 'weight']]) {
+    const p = C.scatterPoints(days, x, y);
+    assert.equal(p.length, both(x, y), x + ' × ' + y);
+    for (const q of p) { const d = days.find((r) => r.date === q.date); assert.equal(q.x, d[x]); assert.equal(q.y, d[y]); }
+  }
+  assert.equal(C.scatterPoints(days, 'steps', 'sleepMin').length, 5);   // 0・2・4・6・8 日目
+  assert.equal(C.scatterPoints(days, 'sleepMin', 'rhr').length, 3);     // 0・2・4
+  assert.equal(C.scatterPoints(days, 'rhr', 'weight').length, 1);       // 3
+  // 日付の昇順
+  const ds = C.scatterPoints(days, 'steps', 'sleepMin').map((q) => q.date);
+  assert.deepEqual(ds, ds.slice().sort());
+});
+
+test('scatterPoints・scatterDefault: 1 列しか読めなかった記録は、どの組も点 0', async () => {
+  const res = await load(C.makeSample().filter((f) => /resting_heart_rate/.test(f.path)));
+  assert.ok(res.days.length > 0);
+  assert.deepEqual(C.scatterDefault(res.days), ['rhr', 'steps']);
+  for (const k of C.NUM_KEYS) if (k !== 'rhr') assert.equal(C.scatterPoints(res.days, 'rhr', k).length, 0, k);
+});
+
+test('scatterDefault: 値のある日数の多い 2 列。同じ数なら DAILY_COLS の並びの早い方', () => {
+  // 心拍 5 日・体重 4 日・歩数 4 日 → 心拍と歩数（歩数が体重より前）
+  const days = daysOf('2026-06-01', 5, (i) => Object.assign({ rhr: 60 }, i < 4 ? { weight: 60, steps: 10 } : {}));
+  assert.deepEqual(C.scatterDefault(days), ['rhr', 'steps']);
+  // 全部同じ数なら並びの先頭の 2 つ
+  assert.deepEqual(C.scatterDefault(daysOf('2026-06-01', 3, () => ({ exMin: 1, fat: 20, score: 80, sleepMin: 400 }))), ['sleepMin', 'score']);
+  // 0 件
+  assert.deepEqual(C.scatterDefault([]), ['steps', 'sleepMin']);
+});
+
+test('scatterPoints: 押した日の 2 つの値 = 日ごとの CSV のその行の数（kg と lb）', async () => {
+  const res = await load(C.makeSample());
+  for (const unit of ['kg', 'lb']) {
+    const cols = C.dailyCols(unit), csv = C.parseCsv(C.toCsv(res, 'daily', { weightOut: unit }));
+    const byDate = new Map(csv.map((r) => [r['日付'], r]));   // parseCsv は見出しをキーにした行
+    const col = (k) => cols.find((c) => c[0] === k)[1];
+    for (const [x, y] of [['steps', 'weight'], ['sleepMin', 'score'], ['weight', 'fat']]) {
+      const p = C.scatterPoints(res.days, x, y, unit);
+      assert.ok(p.length >= 2, x + ' × ' + y);
+      for (const q of p) {
+        const row = byDate.get(q.date);
+        assert.equal(String(q.x), row[col(x)]); assert.equal(String(q.y), row[col(y)]);
+      }
+    }
+  }
+});
+
+test('axisTicks: 最小と最大と、その間の 2〜3 個（昇順）', () => {
+  for (const [a, b] of [[0, 100], [55, 60], [390, 480], [3021, 14873], [67.9, 69.4], [1, 3], [0, 1], [56, 57], [148.3, 155.9]]) {
+    const t = C.axisTicks(a, b);
+    assert.equal(t[0], a); assert.equal(t[t.length - 1], b);
+    assert.ok(t.length >= 4 && t.length <= 5, a + '〜' + b + ': ' + t);
+    for (let i = 1; i < t.length; i++) assert.ok(t[i] > t[i - 1], a + '〜' + b + ': ' + t);
+  }
+  assert.deepEqual(C.axisTicks(0, 100), [0, 25, 50, 75, 100]);
+  assert.deepEqual(C.axisTicks(60, 60), [60]);
+});
