@@ -10,12 +10,13 @@
   var T = window.Text.TEXT[EN ? 'en' : 'ja'];
   function $(id) { return document.getElementById(id); }
   var el = {
-    result: $('result'), sub: $('result-sub'), grid: $('grid'), scatter: $('scatter'), dlRow: $('dl-row'), detail: $('detail'), detailTable: $('detail-table'), notes: $('notes'), preview: $('preview'),
+    result: $('result'), sub: $('result-sub'), grid: $('grid'), scatter: $('scatter'), yoy: $('yoy'), dlRow: $('dl-row'), detail: $('detail'), detailTable: $('detail-table'), notes: $('notes'), preview: $('preview'),
     bom: $('bom'), lang: $('lang'), mdUnit: $('md-unit'), from: $('from'), to: $('to'), tz: $('tz'), wunit: $('wunit'),
     wout: $('wout'),   // 出力の体重の単位（英語の画面だけ。日本語の画面は kg）
   };
   // sx・sy: 図の横と縦の列（null なら記録から決まる既定）。sel: 図で選んだ日の日付
-  var state = { raw: null, res: null, errors: [], skipped: 0, busy: false, sx: null, sy: null, sel: null };
+  // yk・yy・ym: 年を重ねた図の項目・濃くする年（null なら記録から決まる既定）・選んだ月（1〜12。null なら選んでいない）
+  var state = { raw: null, res: null, errors: [], skipped: 0, busy: false, sx: null, sy: null, sel: null, yk: null, yy: null, ym: null };
 
   // --- タイムゾーンの選択肢（既定はこの端末の設定） ---
   var here = 'UTC';
@@ -209,6 +210,141 @@
     });
   }
 
+  // --- 月ごとの平均を年ごとの線で重ねる図（Q-508。平均は calc.js の yearMonthAvg: 月ごとの Markdown の frontmatter と同じ avg） ---
+  var YO = { w: 320, h: 200, l: 46, r: 10, t: 12, b: 22, hit: 18 };   // viewBox の幅・高さ、描く枠の左右上下の余白、点を押したとみなす距離
+  function renderYoy(days) {
+    var YT = T.yoy, ST = T.scatter, box = el.yoy, lang = EN ? 'en' : 'ja';
+    var g = C.yearMonthAvg(days), names = {};
+    C.dailyCols('kg').forEach(function (c) { names[c[0]] = c[ST.col]; });   // 4 項目に体重は無いので、単位で変わらない
+    // 項目ごとの、平均の在る月の数（2 未満の項目は押せない）
+    var cnt = {};
+    g.items.forEach(function (it) { cnt[it] = 0; g.years.forEach(function (yr) { yr.months.forEach(function (mo) { if (mo && mo[it] != null) cnt[it]++; }); }); });
+    var def = C.yearMonthDefault(g);
+    box.innerHTML = '';
+    box.hidden = def.months < 2;
+    if (box.hidden) return;
+    if (!state.yk || cnt[state.yk] < 2) state.yk = def.item;
+    if (state.yy == null || !g.years.some(function (yr) { return yr.year === state.yy; })) state.yy = g.years[g.years.length - 1].year;
+    var k = state.yk;
+    function fmtV(v) { return k === 'sleepMin' ? C.hm(v) : C.fmtInt(v, lang); }
+
+    var cap = document.createElement('p'); cap.className = 'grid-caption'; cap.textContent = YT.name; box.appendChild(cap);
+    var svg = svgEl('svg', { viewBox: '0 0 ' + YO.w + ' ' + YO.h, 'class': 'scatter-svg yoy-svg', role: 'img', tabindex: '0', 'aria-label': YT.name + ST.sep + names[k] }, box);
+    var line = document.createElement('p'); line.className = 'sc-read'; line.setAttribute('aria-live', 'polite'); box.appendChild(line);
+
+    // 点（年ごと。平均の在る月だけ）
+    var pts = [];
+    g.years.forEach(function (yr) { yr.months.forEach(function (mo, j) { if (mo && mo[k] != null) pts.push({ year: yr.year, month: j + 1, v: mo[k] }); }); });
+    var lo = Infinity, hi = -Infinity;
+    pts.forEach(function (p) { if (p.v < lo) lo = p.v; if (p.v > hi) hi = p.v; });
+    var x0 = YO.l, x1 = YO.w - YO.r, y0 = YO.h - YO.b, y1 = YO.t, a = lo, b = hi;
+    if (a === b) { a -= 1; b += 1; }   // 最小 = 最大なら、その値を真ん中に
+    function fx(m) { return x0 + (m - 1) / 11 * (x1 - x0); }
+    function fy(v) { return y0 + (v - a) / (b - a) * (y1 - y0); }
+    svgEl('line', { x1: x0, y1: y0, x2: x1, y2: y0, 'class': 's-axis' }, svg);
+    svgEl('line', { x1: x0, y1: y0, x2: x0, y2: y1, 'class': 's-axis' }, svg);
+    for (var m = 1; m <= 12; m++) {
+      svgEl('line', { x1: fx(m), y1: y0, x2: fx(m), y2: y0 + 3, 'class': 's-axis' }, svg);
+      svgText(svg, fx(m), y0 + 14, String(m), 's-tick');
+    }
+    C.axisTicks(lo, hi).forEach(function (v) {
+      var y = fy(v);
+      svgEl('line', { x1: x0 - 3, y1: y, x2: x0, y2: y, 'class': 's-axis' }, svg);
+      svgText(svg, x0 - 5, y + 3.5, String(v), 's-tick s-y');
+    });
+    // 線は 1 年に 1 本。値の無い月で切る（つながない・0 にしない）。点は平均の在る月ごとに 1 つ
+    var groups = {};
+    g.years.forEach(function (yr) {
+      var gr = svgEl('g', { 'class': 'yoy-year', 'data-year': String(yr.year) }, svg), d = '', dots = '', prev = false;
+      yr.months.forEach(function (mo, j) {
+        var v = mo ? mo[k] : null;
+        if (v == null) { prev = false; return; }
+        var x = fx(j + 1), y = fy(v);
+        d += (prev ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1); prev = true;
+        dots += 'M' + (x - 2.5).toFixed(1) + ' ' + y.toFixed(1) + 'a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0';
+      });
+      if (d) svgEl('path', { d: d, 'class': 'yoy-line' }, gr);
+      if (dots) svgEl('path', { d: dots, 'class': 'yoy-dot' }, gr);
+      groups[yr.year] = gr;
+    });
+    var ring = svgEl('circle', { r: 5, 'class': 's-sel', visibility: 'hidden' }, svg);
+
+    // 押す所: 項目（字は列の名前）と年（字は年の数字）。図の下に置く
+    var itemRow = document.createElement('div'); itemRow.className = 'sc-axis';
+    g.items.forEach(function (it) {
+      var bt = document.createElement('button');
+      bt.type = 'button'; bt.className = 'sc-btn'; bt.textContent = names[it];
+      bt.setAttribute('aria-pressed', String(it === k));
+      bt.disabled = cnt[it] < 2;
+      bt.addEventListener('click', function () {
+        state.yk = it;
+        renderYoy(days);
+        var again = box.querySelector('.sc-axis [aria-pressed="true"]');
+        if (again) again.focus();
+      });
+      itemRow.appendChild(bt);
+    });
+    var yearRow = document.createElement('div'); yearRow.className = 'sc-axis';
+    var yearBtns = g.years.map(function (yr) {
+      var bt = document.createElement('button');
+      bt.type = 'button'; bt.className = 'sc-btn'; bt.textContent = String(yr.year);
+      bt.addEventListener('click', function () { setYear(yr.year); show(); });
+      yearRow.appendChild(bt);
+      return bt;
+    });
+    box.appendChild(itemRow); box.appendChild(yearRow);
+
+    // 濃くする年（図は描き直さない。物差しは変わらない）。濃い年の線をいちばん上に
+    function setYear(y) {
+      state.yy = y;
+      g.years.forEach(function (yr, i) {
+        var on = yr.year === y;
+        groups[yr.year].setAttribute('class', 'yoy-year' + (on ? ' yoy-on' : ''));
+        yearBtns[i].setAttribute('aria-pressed', String(on));
+      });
+      svg.insertBefore(groups[y], ring);
+    }
+    function at(y, mo) { for (var i = 0; i < pts.length; i++) if (pts[i].year === y && pts[i].month === mo) return pts[i]; return null; }
+    // 選んだ年・月の 1 行（年月と平均。睡眠時間は h:mm、ほかは桁区切りの整数）
+    function show() {
+      var p = state.ym ? at(state.yy, state.ym) : null;
+      if (!p) { state.ym = null; ring.setAttribute('visibility', 'hidden'); line.textContent = ''; return; }
+      ring.setAttribute('cx', fx(p.month)); ring.setAttribute('cy', fy(p.v)); ring.setAttribute('visibility', 'visible');
+      line.textContent = p.year + '-' + (p.month < 10 ? '0' : '') + p.month + ST.sep + names[k] + ' ' + fmtV(p.v);
+    }
+    setYear(state.yy);
+    show();
+    svg.addEventListener('click', function (e) {
+      var mt = svg.getScreenCTM(); if (!mt) return;
+      var pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; pt = pt.matrixTransform(mt.inverse());
+      var best = null, bd = YO.hit * YO.hit;
+      pts.forEach(function (p) {
+        var dx = fx(p.month) - pt.x, dy = fy(p.v) - pt.y, dd = dx * dx + dy * dy;
+        if (dd < bd || (dd === bd && p.year === state.yy)) { bd = dd; best = p; }   // 同じ距離なら濃い年の点
+      });
+      if (best) { if (best.year !== state.yy) setYear(best.year); state.ym = best.month; show(); }
+    });
+    // ← → でその年の平均の在る月へ、↑ ↓ で同じ月に平均の在る次の年・前の年へ
+    svg.addEventListener('keydown', function (e) {
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].indexOf(e.key) < 0) return;
+      e.preventDefault();
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        var fwd = e.key === 'ArrowRight', ms = pts.filter(function (p) { return p.year === state.yy; }).map(function (p) { return p.month; });
+        if (!ms.length) return;
+        var next = null;
+        if (!state.ym) next = fwd ? ms[0] : ms[ms.length - 1];
+        else if (fwd) { for (var i = 0; i < ms.length; i++) if (ms[i] > state.ym) { next = ms[i]; break; } }
+        else { for (var j = ms.length - 1; j >= 0; j--) if (ms[j] < state.ym) { next = ms[j]; break; } }
+        if (next != null) { state.ym = next; show(); }
+        return;
+      }
+      var up = e.key === 'ArrowUp', ys = g.years.map(function (yr) { return yr.year; });
+      for (var n = ys.indexOf(state.yy) + (up ? 1 : -1); n >= 0 && n < ys.length; n += up ? 1 : -1) {
+        if (!state.ym || at(ys[n], state.ym)) { setYear(ys[n]); show(); return; }
+      }
+    });
+  }
+
   // --- 結果を出す ---
 
   function render() {
@@ -216,6 +352,7 @@
     el.detail.hidden = false;
     renderGrid(r.days);
     renderScatter(r.days);
+    renderYoy(r.days);
     if (!s.dayCount) {
       text(el.result, '—');
       text(el.sub, T.noRecords);
@@ -300,7 +437,7 @@
   function run(makeSources) {
     if (state.busy) return;
     state.busy = true;
-    state.errors = []; state.skipped = 0; state.sx = state.sy = state.sel = null;
+    state.errors = []; state.skipped = 0; state.sx = state.sy = state.sel = null; state.yk = state.yy = state.ym = null;
     text(el.result, T.reading); text(el.sub, '');
     el.dlRow.hidden = true;
     Promise.resolve().then(makeSources).then(function (sources) {

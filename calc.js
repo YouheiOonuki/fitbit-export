@@ -635,13 +635,19 @@
     var v = list.map(function (r) { return r[k]; }).filter(function (x) { return x != null; });
     return v.length ? Math.round(v.reduce(function (a, b) { return a + b; }, 0) / v.length) : null;
   }
+  // 月の平均を出す項目: [日ごとの行のキー, 月ごとの Markdown の frontmatter のキー]。並びは frontmatter と年を重ねた図の押す所の順
+  var MONTH_AVG = [['steps', 'steps_average'], ['sleepMin', 'minutes_asleep_average'], ['score', 'sleep_score_average'], ['rhr', 'resting_heart_rate_average']];
+  /** 1 か月分の行から、MONTH_AVG の項目ごとの平均（avg。値の無い項目は null） */
+  function monthAvg(list) {
+    var o = {};
+    MONTH_AVG.forEach(function (p) { o[p[0]] = avg(list, p[0]); });
+    return o;
+  }
   /** 1 か月分のノート（frontmatter に平均、本文に日ごとの表） */
   function monthNote(month, list, lang, unit) {
     var t = L[lang === 'en' ? 'en' : 'ja'], wu = weightOut(unit);
-    var fm = ['---', 'month: ' + yamlValue(month), 'days: ' + list.length];
-    [['steps', 'steps_average'], ['sleepMin', 'minutes_asleep_average'], ['score', 'sleep_score_average'], ['rhr', 'resting_heart_rate_average']].forEach(function (p) {
-      var a = avg(list, p[0]); if (a != null) fm.push(p[1] + ': ' + a);
-    });
+    var fm = ['---', 'month: ' + yamlValue(month), 'days: ' + list.length], a = monthAvg(list);
+    MONTH_AVG.forEach(function (p) { if (a[p[0]] != null) fm.push(p[1] + ': ' + a[p[0]]); });
     fm.push('source: "fitbit-export"', '---', '', '# ' + month, '');
     var head = [t.date, t.steps, t.sleep, t.score, t.rhr, t.weight + ' (' + wu + ')', t.ex];
     var rows = ['| ' + head.join(' | ') + ' |', '|' + head.map(function () { return ' --- '; }).join('|') + '|'];
@@ -651,6 +657,39 @@
       rows.push('| ' + cells.map(function (c) { return String(c).replace(/\|/g, '\\|'); }).join(' | ') + ' |');
     });
     return fm.concat(rows).join('\n') + '\n';
+  }
+
+  // ---------- 月ごとの平均を年ごとに重ねる図（画面の図。Q-508） ----------
+  /**
+   * 年 × 月 × MONTH_AVG の項目の平均（月ごとの Markdown の frontmatter と同じ monthAvg）。記録の最初の月より前・最後の月より後は null
+   * @param {object[]} days aggregate の days（日付の昇順）
+   * @returns {{items:string[], years:Array<{year:number, months:Array<null|Object<string,number|null>>}>}} months は 1〜12 月の 12 個
+   */
+  function yearMonthAvg(days) {
+    var items = MONTH_AVG.map(function (p) { return p[0]; });
+    if (!days || !days.length) return { items: items, years: [] };
+    var byMonth = new Map();
+    days.forEach(function (r) { push(byMonth, r.date.slice(0, 7), r); });
+    var from = days[0].date, to = days[days.length - 1].date, years = [];
+    for (var y = +from.slice(0, 4); y <= +to.slice(0, 4); y++) {
+      var months = [];
+      for (var m = 1; m <= 12; m++) {
+        var list = byMonth.get(y + '-' + pad(m));
+        months.push(list ? monthAvg(list) : null);
+      }
+      years.push({ year: y, months: months });
+    }
+    return { items: items, years: years };
+  }
+  /** 既定の項目: 平均の在る月の数がいちばん多い項目（同じ数なら MONTH_AVG の並びの早い方）と、その月の数 */
+  function yearMonthDefault(g) {
+    var best = g.items[0], bn = -1;
+    g.items.forEach(function (k) {
+      var n = 0;
+      g.years.forEach(function (yr) { yr.months.forEach(function (mo) { if (mo && mo[k] != null) n++; }); });
+      if (n > bn) { bn = n; best = k; }
+    });
+    return { item: best, months: Math.max(bn, 0) };
   }
 
   /**
@@ -731,6 +770,7 @@
     toCsv: toCsv, toMarkdownFiles: toMarkdownFiles, dayNote: dayNote, monthNote: monthNote, makeSample: makeSample,
     weightIn: weightIn, DAILY_COLS: DAILY_COLS, EXERCISE_COLS: EXERCISE_COLS, monthGrid: monthGrid,
     dailyCols: dailyCols, NUM_KEYS: NUM_KEYS, scatterPoints: scatterPoints, scatterDefault: scatterDefault, axisTicks: axisTicks,
+    MONTH_AVG: MONTH_AVG, yearMonthAvg: yearMonthAvg, yearMonthDefault: yearMonthDefault, hm: hm, fmtInt: fmtInt,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Calc = api;
