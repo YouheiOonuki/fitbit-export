@@ -16,7 +16,8 @@
   };
   // sx・sy: 図の横と縦の列（null なら記録から決まる既定）。sel: 図で選んだ日の日付
   // yk・yy・ym: 年を重ねた図の項目・濃くする年（null なら記録から決まる既定）・選んだ月（1〜12。null なら選んでいない）
-  var state = { raw: null, res: null, errors: [], skipped: 0, busy: false, sx: null, sy: null, sel: null, yk: null, yy: null, ym: null };
+  // mp: 升目で先に押した月（{year, month}。まだなら null）。mf: 升目のフォーカスの止まりの月（"YYYY-MM"）
+  var state = { raw: null, res: null, errors: [], skipped: 0, busy: false, sx: null, sy: null, sel: null, yk: null, yy: null, ym: null, mp: null, mf: null };
 
   // --- タイムゾーンの選択肢（既定はこの端末の設定） ---
   var here = 'UTC';
@@ -52,7 +53,11 @@
     if (parent) parent.appendChild(e);
     return e;
   }
-  function svgText(parent, x, y, t, cls) { svgEl('text', { x: x, y: y, 'class': cls, 'aria-hidden': 'true' }, parent).textContent = t; }
+  function svgText(parent, x, y, t, cls, id) {
+    var e = svgEl('text', { x: x, y: y, 'class': cls, 'aria-hidden': 'true' }, parent);
+    if (id) e.id = id;
+    e.textContent = t;
+  }
   // 段を色だけで分けない: 0 は枠だけ、1・2 は中の四角の大きさ、3 は塗りに点
   function mark(parent, x, y, level) {
     var s = G.size;
@@ -66,18 +71,23 @@
       svgEl('circle', { cx: x + s / 2, cy: y + s / 2, r: 2.5, 'class': 'g-dot' }, parent);
     }
   }
+  // 升目は書き出しの期間で絞る前の日々から描く（選んだ後も、ほかの月が見えている）。月の列を押すと期間の欄に入る（Q-559。値は calc.js の pickMonth）
+  var grid = { keys: [], hits: {}, frames: [] };   // 押せる月・月ごとの押す所・年ごとの枠
   function renderGrid(days) {
     var g = C.monthGrid(days), GT = T.grid;
     el.grid.innerHTML = '';
     el.grid.hidden = !g.years.length;
+    grid = { keys: C.gridMonths(g), hits: {}, frames: [] };
     if (!g.years.length) return;
     var cap = document.createElement('p'); cap.className = 'grid-caption'; cap.textContent = GT.caption; el.grid.appendChild(cap);
     var W = G.label + 12 * G.pitch, H = G.head + g.items.length * G.pitch;
+    if (grid.keys.indexOf(state.mf) < 0) state.mf = (el.from.value && grid.keys.indexOf(el.from.value.slice(0, 7)) >= 0) ? el.from.value.slice(0, 7) : grid.keys[0] || null;
     // 1 年 1 枚（期間が長くても横に伸びず、下に積む）
     g.years.forEach(function (yr) {
       var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, 'class': 'grid-year', role: 'group', 'aria-label': String(yr.year) }, el.grid);
-      svgText(svg, 0, 13, String(yr.year), 'g-year');
-      for (var m = 1; m <= 12; m++) svgText(svg, G.label + (m - 1) * G.pitch + G.size / 2, 13, String(m), 'g-month');
+      var yid = 'g-y' + yr.year;
+      svgText(svg, 0, 13, String(yr.year), 'g-year', yid);
+      for (var m = 1; m <= 12; m++) svgText(svg, G.label + (m - 1) * G.pitch + G.size / 2, 13, String(m), 'g-month', yid + '-' + m);
       g.items.forEach(function (it, i) {
         var y = G.head + i * G.pitch;
         svgText(svg, 0, y + 13, GT.short[it], 'g-item');
@@ -87,7 +97,20 @@
           mark(svgEl('g', { role: 'img', 'aria-label': GT.cell(yr.year, mo.month, GT.full[it], c.n) }, svg), G.label + j * G.pitch, y, c.level);
         });
       });
+      // 選んだ期間の枠（年に 1 つ。掛かる月の列を囲む。3 px は CSS の vector-effect で画面の px）
+      grid.frames.push({ year: yr.year, months: yr.months.map(function (mo) { return mo ? mo.month : null; }), rect: svgEl('rect', { y: G.head - 2, height: g.items.length * G.pitch, rx: 3, 'class': 'g-range', visibility: 'hidden' }, svg) });
+      // 月の列の押す所（記録の在る月だけ）。名前は年と月の字（aria-labelledby）。フォーカスの止まりは升目全体で 1 つ
+      yr.months.forEach(function (mo, j) {
+        if (!mo) return;
+        var key = yr.year + '-' + (mo.month < 10 ? '0' : '') + mo.month;
+        if (grid.keys.indexOf(key) < 0) return;
+        grid.hits[key] = svgEl('rect', {
+          x: G.label + j * G.pitch - 2, y: G.head - 2, width: G.pitch, height: g.items.length * G.pitch, 'class': 'g-hit',
+          role: 'button', tabindex: key === state.mf ? '0' : '-1', 'aria-labelledby': yid + ' ' + yid + '-' + mo.month, 'data-month': key,
+        }, svg);
+      });
     });
+    paintRange();
     var lg = document.createElement('p'); lg.className = 'grid-legend'; lg.setAttribute('aria-hidden', 'true');
     GT.legend.forEach(function (t, lv) {
       var span = document.createElement('span');
@@ -97,6 +120,55 @@
     });
     el.grid.appendChild(lg);
   }
+  // 期間の欄の値から、掛かる月の列に枠（升を押した時も、欄に入れた時も同じ道）
+  function paintRange() {
+    var f = el.from.value, t = el.to.value;
+    grid.frames.forEach(function (fr) {
+      var j0 = -1, j1 = -1;
+      fr.months.forEach(function (m, j) { if (m && C.monthInRange(fr.year, m, f, t)) { if (j0 < 0) j0 = j; j1 = j; } });
+      if (j0 < 0) { fr.rect.setAttribute('visibility', 'hidden'); return; }
+      fr.rect.setAttribute('x', G.label + j0 * G.pitch - 2);
+      fr.rect.setAttribute('width', (j1 - j0) * G.pitch + G.size + 4);
+      fr.rect.setAttribute('visibility', 'visible');
+    });
+    Object.keys(grid.hits).forEach(function (k) { grid.hits[k].setAttribute('aria-pressed', String(C.monthInRange(+k.slice(0, 4), +k.slice(5, 7), f, t))); });
+  }
+  // 押した結果は期間の欄に入れ、欄を変えた時と同じ change を出す（書き出しは欄の値を読む）
+  var pressing = false;
+  function pressMonth(key) {
+    var r = C.pickMonth(state.mp, +key.slice(0, 4), +key.slice(5, 7));
+    state.mp = r.pick;
+    pressing = true;
+    el.from.value = r.from; el.to.value = r.to;
+    [el.from, el.to].forEach(function (x) { x.dispatchEvent(new Event('change', { bubbles: true })); });
+    pressing = false;
+  }
+  function focusMonth(key) {
+    var h = grid.hits[key];
+    if (!h) return;
+    Object.keys(grid.hits).forEach(function (k) { grid.hits[k].setAttribute('tabindex', k === key ? '0' : '-1'); });
+    state.mf = key;
+    h.focus();
+  }
+  el.grid.addEventListener('click', function (e) {
+    var h = e.target.closest && e.target.closest('.g-hit');
+    if (!h) return;
+    var k = h.getAttribute('data-month');
+    focusMonth(k); pressMonth(k);
+  });
+  // ← → で前・次の月、↑ ↓ で前・次の年の同じ月（記録の在る月だけ）。Enter・Space で押す
+  el.grid.addEventListener('keydown', function (e) {
+    var h = e.target.closest && e.target.closest('.g-hit');
+    if (!h) return;
+    var k = h.getAttribute('data-month');
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pressMonth(k); return; }
+    var dir = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[e.key];
+    if (!dir) return;
+    e.preventDefault();
+    focusMonth(C.moveMonth(grid.keys, k, dir));
+  });
+  // 欄に手で入れたら、升目の 1 つ目からやり直す
+  [el.from, el.to].forEach(function (x) { x.addEventListener('change', function () { if (!pressing) state.mp = null; paintRange(); }); });
 
   // --- 2 つの列を 1 日 1 点で並べる図（Q-426。点の並びと既定の列は calc.js の scatterPoints・scatterDefault） ---
   var SC = { w: 320, h: 230, l: 46, r: 10, t: 16, b: 22, hit: 18 };   // viewBox の幅・高さ、描く枠の左右上下の余白、点を押したとみなす距離
@@ -437,7 +509,7 @@
   function run(makeSources) {
     if (state.busy) return;
     state.busy = true;
-    state.errors = []; state.skipped = 0; state.sx = state.sy = state.sel = null; state.yk = state.yy = state.ym = null;
+    state.errors = []; state.skipped = 0; state.sx = state.sy = state.sel = null; state.yk = state.yy = state.ym = null; state.mp = state.mf = null;
     text(el.result, T.reading); text(el.sub, '');
     el.dlRow.hidden = true;
     Promise.resolve().then(makeSources).then(function (sources) {

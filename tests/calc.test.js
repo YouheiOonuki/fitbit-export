@@ -335,6 +335,77 @@ test('monthGrid: 見本のデータで、升の日数が項目ごとの日数と
   assert.equal(sum('exercise'), res.days.filter((d) => d.exCount).length);
 });
 
+// ---------- 升目の月を押して書き出す期間を選ぶ（Q-559） ----------
+/** 月を順に押した後の期間の欄（画面の pressMonth と同じく、返りの pick を次へ渡す） */
+function press(...ms) {
+  let pick = null, r = null;
+  for (const [y, m] of ms) { r = C.pickMonth(pick, y, m); pick = r.pick; }
+  return r;
+}
+test('pickMonth: 2 つ押した後の欄 = 始めの月の 1 日と終わりの月の末日（5 通り）', () => {
+  const cases = [
+    [[[2028, 1], [2028, 2]], '2028-01-01', '2028-02-29'],   // うるう年の 2 月
+    [[[2027, 2], [2027, 2]], '2027-02-01', '2027-02-28'],   // 同じ月を 2 回（平年の 2 月）
+    [[[2025, 12], [2026, 1]], '2025-12-01', '2026-01-31'],  // 12 月から翌年 1 月
+    [[[2026, 9], [2026, 3]], '2026-03-01', '2026-09-30'],   // 逆の順は入れ替える
+    [[[2026, 1], [2024, 2]], '2024-02-01', '2026-01-31'],   // 年をまたいで逆の順
+  ];
+  for (const [ms, from, to] of cases) {
+    const r = press(...ms);
+    assert.deepEqual([r.from, r.to, r.pick], [from, to, null], JSON.stringify(ms));
+  }
+});
+test('pickMonth: 1 つ目は始めだけ（終わりは空）、3 つ目は選び直し', () => {
+  assert.deepEqual(press([2026, 8]), { from: '2026-08-01', to: '', pick: { year: 2026, month: 8 } });
+  assert.deepEqual(press([2026, 8], [2026, 9], [2025, 4]), { from: '2025-04-01', to: '', pick: { year: 2025, month: 4 } });
+  assert.deepEqual(press([2026, 8], [2026, 9], [2025, 4], [2025, 6]), { from: '2025-04-01', to: '2025-06-30', pick: null });
+});
+test('monthInRange: 欄に入れた期間 → 枠の掛かる月（3 通り）。両方空なら枠なし', () => {
+  const on = (from, to) => [2025, 2026].flatMap((y) => Array.from({ length: 12 }, (_, i) => i + 1).filter((m) => C.monthInRange(y, m, from, to)).map((m) => y + '-' + m));
+  assert.deepEqual(on('2026-03-15', '2026-05-02'), ['2026-3', '2026-4', '2026-5']);   // 月の途中から途中まで
+  assert.deepEqual(on('2025-11-30', ''), ['2025-11', '2025-12', ...Array.from({ length: 12 }, (_, i) => '2026-' + (i + 1))]);   // 終わりが空 = 最後まで
+  assert.deepEqual(on('', '2025-02-01'), ['2025-1', '2025-2']);   // 始めが空 = 最初から
+  assert.deepEqual(on('', ''), []);
+  assert.deepEqual(on('2026-05-01', '2026-03-31'), []);   // 始め > 終わりは掛からない
+});
+test('pickMonth → monthInRange: 升で選んだ月と、枠の掛かる月が同じ', () => {
+  const r = press([2026, 2], [2025, 11]);
+  const on = [];
+  for (const [y, m] of [[2025, 10], [2025, 11], [2025, 12], [2026, 1], [2026, 2], [2026, 3]]) if (C.monthInRange(y, m, r.from, r.to)) on.push(y + '-' + m);
+  assert.deepEqual(on, ['2025-11', '2025-12', '2026-1', '2026-2']);
+});
+test('gridMonths: 押せるのは記録の在る月だけ（期間の外・0 日の月は除く）', () => {
+  const days = [{ date: '2024-11-20', steps: 1 }, { date: '2025-02-03', rhr: 55 }, { date: '2025-11-02', exCount: 1 }];
+  assert.deepEqual(C.gridMonths(C.monthGrid(days)), ['2024-11', '2025-02', '2025-11']);
+  assert.deepEqual(C.gridMonths(C.monthGrid([])), []);
+});
+test('moveMonth: ← → は前後の押せる月（年をまたぐ）、↑ ↓ は同じ月の前後の年、無ければ動かない', () => {
+  const keys = ['2024-03', '2024-11', '2025-02', '2025-11', '2026-11'];
+  assert.equal(C.moveMonth(keys, '2024-11', 'right'), '2025-02');
+  assert.equal(C.moveMonth(keys, '2025-02', 'left'), '2024-11');
+  assert.equal(C.moveMonth(keys, '2024-03', 'left'), '2024-03');
+  assert.equal(C.moveMonth(keys, '2026-11', 'right'), '2026-11');
+  assert.equal(C.moveMonth(keys, '2024-11', 'down'), '2025-11');
+  assert.equal(C.moveMonth(keys, '2025-11', 'down'), '2026-11');
+  assert.equal(C.moveMonth(keys, '2026-11', 'up'), '2025-11');
+  assert.equal(C.moveMonth(keys, '2025-02', 'up'), '2025-02');   // 2024-02 は記録が無い
+  // キーボードだけで、押せる月の全部に届く（→ を数だけ押す）
+  let k = keys[0]; const seen = [k];
+  for (let i = 1; i < keys.length; i++) { k = C.moveMonth(keys, k, 'right'); seen.push(k); }
+  assert.deepEqual(seen, keys);
+});
+test('升で選んだ時の書き出しの行の数 = その期間の日の数（見本のデータ。欄に同じ日付を入れた時と同じ outOpts の道）', async () => {
+  const res = await load(C.makeSample());
+  assert.deepEqual(C.gridMonths(C.monthGrid(res.days)), ['2026-08', '2026-09']);
+  const rows = (o) => C.toCsv(res, 'daily', o).trim().split('\r\n').length - 1;
+  for (const ms of [[[2026, 8], [2026, 8]], [[2026, 9], [2026, 8]], [[2026, 9]]]) {
+    const r = press(...ms);
+    const n = res.days.filter((d) => d.date >= r.from && (!r.to || d.date <= r.to)).length;
+    assert.ok(n > 0);
+    assert.equal(rows({ from: r.from || null, to: r.to || null }), n, JSON.stringify(ms));   // main.js の outOpts は空の欄を null に
+  }
+});
+
 // ---------- 2 つの列を 1 日 1 点で並べる図（Q-426） ----------
 test('NUM_KEYS: 日ごとの行の数の列 15 個（日付・時刻・運動の種類を除く。DAILY_COLS の並び）', () => {
   assert.deepEqual(C.NUM_KEYS, ['steps', 'sleepMin', 'awakeMin', 'inBedMin', 'deep', 'light', 'rem', 'napMin', 'score', 'rhr', 'weight', 'bmi', 'fat', 'exCount', 'exMin']);

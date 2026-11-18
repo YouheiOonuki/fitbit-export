@@ -143,3 +143,18 @@ test('英語の文: 1 のときは単数', () => {
   assert.equal(T.skipped(1), '1 other file was skipped (for example, minute-by-minute heart rate).');
   assert.equal(T.range({ from: '2026-08-01', to: '2026-09-19' }, ['steps 50'], '1'), '2026-08-01 to 2026-09-19 (days with steps 50; 1 exercise session)');
 });
+
+test('升目で期間を選ぶ（Q-559）: 日・英とも、升目と期間の欄 2 つが在り、同じ main.js で動く', () => {
+  for (const [p, js] of [['index.html', './main.js'], ['en/index.html', '../main.js']]) {
+    const h = read(p);
+    assert.match(h, /<div class="grid" id="grid" hidden><\/div>/, p);
+    assert.match(h, /<input type="date" id="from"/, p);
+    assert.match(h, /<input type="date" id="to"/, p);
+    assert.ok(h.includes('<script src="' + js + '"></script>'), p);
+  }
+  // 升の名前は今ある年と月の字（新しい文を足さない）。押した結果は期間の欄に入れて change を出す
+  const m = read('main.js');
+  assert.match(m, /'aria-labelledby': yid \+ ' ' \+ yid \+ '-' \+ mo\.month/);
+  assert.match(m, /el\.from\.value = r\.from; el\.to\.value = r\.to;/);
+  assert.match(m, /dispatchEvent\(new Event\('change'/);
+});
