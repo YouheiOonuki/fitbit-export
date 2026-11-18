@@ -115,9 +115,11 @@
     if (!state.sx || !state.sy) { var d0 = C.scatterDefault(days); state.sx = d0[0]; state.sy = d0[1]; }
     var sx = state.sx, sy = state.sy;
 
-    // 横と縦の押す所（字は列の名前。同じ列どうしと、点が 2 つ未満になる組は押せない）
+    // 横と縦の押す所（字は列の名前。同じ列どうしと、点が 2 つ未満になる組は押せない）。図の下に置く（図を先に。Q-430）
+    var rows = [];
     [0, 1].forEach(function (axis) {
       var row = document.createElement('div'); row.className = 'sc-axis';
+      row.setAttribute('role', 'group'); row.setAttribute('aria-label', ST.label[axis]);
       var head = document.createElement('span'); head.className = 'sc-axis-name'; head.textContent = ST.axis[axis]; row.appendChild(head);
       keys.forEach(function (k) {
         var other = axis ? sx : sy, b = document.createElement('button');
@@ -132,12 +134,13 @@
         });
         row.appendChild(b);
       });
-      box.appendChild(row);
+      rows.push(row);
     });
 
     var pts = C.scatterPoints(days, sx, sy, wu);
     var svg = svgEl('svg', { viewBox: '0 0 ' + SC.w + ' ' + SC.h, 'class': 'scatter-svg', role: 'img', tabindex: '0', 'aria-label': names[sx] + ' × ' + names[sy] }, box);
     var line = document.createElement('p'); line.className = 'sc-read'; line.setAttribute('aria-live', 'polite'); box.appendChild(line);
+    rows.forEach(function (row) { box.appendChild(row); });
     var x0 = SC.l, x1 = SC.w - SC.r, y0 = SC.h - SC.b, y1 = SC.t;
     function range(k) {
       var lo = Infinity, hi = -Infinity;
