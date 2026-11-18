@@ -90,6 +90,7 @@
         <li>CSV（Excel 用）か Markdown（zip）をダウンロードする</li>
       </ol>
       <p>図の上の項目を押すと、2 つの項目を 1 日 1 点で並べます。点を押すと、その日の値が出ます。</p>
+      <p>年を重ねた図は、選んだ項目の月ごとの平均を、年ごとの線で同じ 1〜12 月に並べます。年を押すと、その年の線が濃くなります。</p>
     </article>
 
     <article class="card content" id="export">
@@ -108,11 +109,14 @@
     <article class="card content" id="time">
       <h2>読むファイルと時刻・単位の扱い</h2>
       <p>読むのは睡眠・睡眠スコア・歩数・安静時心拍数・体重・運動のファイルだけで、フォルダ名は見ずにファイル名で探します。</p>
-      <ul>
-        <li>歩数と運動の時刻は UTC で記録されているので、選んだタイムゾーンで日付を分けます。</li>
-        <li>weight-日付.json の体重はポンドとみなして kg に直します。weight.csv（グラム）があれば比べて決めます。</li>
-        <li>両方の形がある日は Global Export Data の JSON を使います。</li>
-      </ul>
+      <details>
+        <summary>時刻・単位・重なった日</summary>
+        <ul>
+          <li>歩数と運動の時刻は UTC で記録されているので、選んだタイムゾーンで日付を分けます。</li>
+          <li>weight-日付.json の体重はポンドとみなして kg に直します。weight.csv（グラム）があれば比べて決めます。</li>
+          <li>両方の形がある日は Global Export Data の JSON を使います。</li>
+        </ul>
+      </details>
       <p class="small">形式の根拠: Google Health ヘルプと公開の解析コード。最終確認日 <time datetime="2026-09-25">2026年9月25日</time>。</p>
       <details>
         <summary>読むファイルの名前と出典</summary>
@@ -156,6 +160,7 @@
           <li><time datetime="2026-11-17">2026年11月17日</time> 項目と月の升目、よくある質問 2 問</li>
           <li><time datetime="2026-11-18">2026年11月18日</time> Fitbit アカウントの削除の告知を確かめ直した</li>
           <li><time datetime="2026-11-18">2026年11月18日</time> 2 つの項目を点で並べる図を足した</li>
+          <li><time datetime="2026-11-18">2026年11月18日</time> 月ごとの平均を年ごとの線で重ねる図</li>
         </ul>
       </details>
     </article>

@@ -87,6 +87,7 @@
         <li>Download the CSV for Excel or Google Sheets, or the Markdown zip for a notes app such as Obsidian.</li>
       </ol>
       <p>Tap an item above the chart to plot two items against each other, one dot per day. Tap a dot to see that day's values.</p>
+      <p>The year-over-year chart draws one line per year for the selected item, using each month's average. Select a year to highlight its line.</p>
       <h3 id="sheets">Can I export Fitbit data to Google Sheets?</h3>
       <p>Not directly: the converter makes a CSV and sends it nowhere. Import the CSV into Google Sheets.</p>
     </article>
@@ -109,11 +110,14 @@
     <article class="card content" id="time">
       <h2>Which files are read, and how times and units are handled</h2>
       <p>The converter reads only the sleep, sleep score, steps, resting heart rate, weight and exercise files. It finds them by file name, so folder names do not matter.</p>
-      <ul>
-        <li>Step and exercise times are recorded in UTC. They are split into days in the time zone you choose.</li>
-        <li>Weight in weight-YYYY-MM-DD.json is read as pounds. If weight.csv (grams) is also there, the two are compared to decide. The output can be kg or lb.</li>
-        <li>If a day appears in both formats, the JSON in Global Export Data is used.</li>
-      </ul>
+      <details>
+        <summary>Times, units and duplicates</summary>
+        <ul>
+          <li>Step and exercise times are recorded in UTC. They are split into days in the time zone you choose.</li>
+          <li>Weight in weight-YYYY-MM-DD.json is read as pounds. If weight.csv (grams) is also there, the two are compared to decide. The output can be kg or lb.</li>
+          <li>If a day appears in both formats, the JSON in Global Export Data is used.</li>
+        </ul>
+      </details>
       <p class="small">Sources: Google Health Help and public parsers. Last checked <time datetime="2026-09-25">2026-09-25</time>.</p>
       <details>
         <summary>CSV columns</summary>
@@ -165,6 +169,7 @@
           <li><time datetime="2026-11-17">2026-11-17</time> Records-by-month grid; 2 questions added</li>
           <li><time datetime="2026-11-18">2026-11-18</time> Deletion note rechecked; hourly question removed</li>
           <li><time datetime="2026-11-18">2026-11-18</time> Added a chart that plots two items against each other.</li>
+          <li><time datetime="2026-11-18">2026-11-18</time> Year-over-year chart of monthly averages.</li>
         </ul>
       </details>
     </article>

@@ -180,3 +180,9 @@ details.about-tool ul { padding-left: 1.2rem; margin: var(--sp-1) 0 var(--sp-2);
   /* 印刷では折りたたみの中も出す（内訳・入れた値を紙に残す） */
   main details::details-content { content-visibility: visible; display: block; }
 }
+/* 月ごとの平均を年ごとの線で重ねる図（Q-508）。濃くした年だけ線を太く、ほかの年は薄く */
+.yoy-line { fill: none; stroke: var(--muted); stroke-width: 1; opacity: 0.45; }
+.yoy-dot { fill: var(--muted); opacity: 0.45; }
+.yoy-on .yoy-line { stroke: var(--accent); stroke-width: 2.25; opacity: 1; }
+.yoy-on .yoy-dot { fill: var(--accent); opacity: 1; }
+@media (forced-colors: active) { .yoy-line { stroke: CanvasText; } .yoy-dot { fill: CanvasText; } .yoy-on .yoy-line { stroke: Highlight; } .yoy-on .yoy-dot { fill: Highlight; } }

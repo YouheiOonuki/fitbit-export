@@ -67,6 +67,8 @@
       },
       // 2 つの列を 1 日 1 点で並べる図（Q-426）。列の名前は calc.js の DAILY_COLS（日本語の列名）。axis は押す所の行の頭の字（矢印。Q-430）、label はその行の読み上げの名前
       scatter: { col: 1, axis: ['→', '↑'], label: ['横', '縦'], sep: '　' },
+      // 月ごとの平均を年ごとの線で重ねる図（Q-508）。押す所の字は scatter と同じ列の名前と年の数字
+      yoy: { name: '月ごと・年を重ねて' },
     },
 
     en: {
@@ -129,6 +131,7 @@
       },
       // 列の名前は DAILY_COLS の英語の列名（CSV の見出しと同じ）。行の頭は矢印、読み上げの名前は label（Q-430）
       scatter: { col: 2, axis: ['→', '↑'], label: ['Horizontal axis', 'Vertical axis'], sep: ' · ' },
+      yoy: { name: 'Month by month, year over year' },
     },
   };
 

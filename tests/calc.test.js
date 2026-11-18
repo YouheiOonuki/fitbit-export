@@ -402,3 +402,74 @@ test('axisTicks: 最小と最大と、その間の 2〜3 個（昇順）', () =>
   assert.deepEqual(C.axisTicks(0, 100), [0, 25, 50, 75, 100]);
   assert.deepEqual(C.axisTicks(60, 60), [60]);
 });
+
+// ---------- 月ごとの平均を年ごとの線で重ねる図（Q-508） ----------
+// 2025-11-20〜2027-02-10。2026-03 は記録が無い月、2026-07 は睡眠だけ、心拍は 2026 年だけ
+function yoyDays() {
+  return daysOf('2025-11-20', 448, (i) => {
+    const t = Date.parse('2025-11-20T00:00:00Z') + i * 86400000, ym = new Date(t).toISOString().slice(0, 7);
+    if (ym === '2026-03') return null;
+    if (ym === '2026-07') return { sleepMin: 400 + (i % 7) };
+    const o = { steps: 5000 + (i * 37) % 3000, sleepMin: 380 + (i % 50), score: 70 + (i % 15) };
+    if (ym.startsWith('2026')) o.rhr = 55 + (i % 6);
+    return o;
+  }).filter((d) => d.date.slice(0, 7) !== '2026-03');
+}
+
+test('yearMonthAvg: 線の点の数 = avg が null でない月の数（項目 4 つ・年 3 つ・欠けた月）', () => {
+  const days = yoyDays(), g = C.yearMonthAvg(days);
+  assert.deepEqual(g.items, ['steps', 'sleepMin', 'score', 'rhr']);
+  assert.deepEqual(g.years.map((y) => y.year), [2025, 2026, 2027]);
+  // 月ごとに分けて、項目に値のある日が 1 日でもある月を数える（avg が null でない月）
+  const byMonth = new Map();
+  for (const d of days) { const k = d.date.slice(0, 7); if (!byMonth.has(k)) byMonth.set(k, []); byMonth.get(k).push(d); }
+  for (const it of g.items) {
+    const want = [...byMonth.values()].filter((l) => l.some((d) => d[it] != null)).length;
+    const got = g.years.reduce((t, y) => t + y.months.filter((m) => m && m[it] != null).length, 0);
+    assert.equal(got, want, it);
+  }
+  assert.equal(g.years[0].months[9], null);          // 2025-10: 記録の前
+  assert.equal(g.years[1].months[2], null);          // 2026-03: 記録の無い月
+  assert.equal(g.years[1].months[6].steps, null);    // 2026-07: 歩数の無い月（0 にしない）
+  assert.equal(g.years[2].months[2], null);          // 2027-03: 記録の後
+  assert.equal(g.years[0].months[10].rhr, null);     // 2025-11: 心拍の無い年
+});
+
+test('yearMonthAvg: 月の平均 = 月ごとの Markdown の frontmatter の *_average（4 項目 × 3 か月）', () => {
+  const days = daysOf('2026-04-01', 91, (i) => Object.assign({ steps: 4000 + i * 113, sleepMin: 350 + (i * 7) % 120, score: 60 + (i % 31) },
+    i % 4 ? { rhr: 54 + (i % 9) } : {}));
+  const g = C.yearMonthAvg(days), files = C.toMarkdownFiles({ days, exercises: [] }, { unit: 'month' });
+  assert.equal(files.length, 3);
+  let n = 0;
+  for (const f of files) {
+    const m = +f.name.slice(-5, -3), fm = Object.fromEntries(f.text.split('\n').filter((l) => /_average: /.test(l)).map((l) => l.split(': ')));
+    for (const [k, key] of C.MONTH_AVG) { assert.equal(String(g.years[0].months[m - 1][k]), fm[key], f.name + ' ' + key); n++; }
+  }
+  assert.equal(n, 12);
+});
+
+test('yearMonthAvg: monthNote は同じ monthAvg から（見本の frontmatter が前と同じ）', async () => {
+  const res = await load(C.makeSample());
+  const fms = C.toMarkdownFiles(res, { unit: 'month' }).map((f) => f.text.split('\n---')[0]);
+  assert.deepEqual(fms, [
+    '---\nmonth: "2026-08"\ndays: 31\nsteps_average: 6169\nminutes_asleep_average: 438\nsleep_score_average: 78\nresting_heart_rate_average: 57\nsource: "fitbit-export"',
+    '---\nmonth: "2026-09"\ndays: 19\nsteps_average: 6217\nminutes_asleep_average: 428\nsleep_score_average: 78\nresting_heart_rate_average: 58\nsource: "fitbit-export"',
+  ]);
+  const g = C.yearMonthAvg(res.days);
+  assert.deepEqual(g.years.map((y) => y.year), [2026]);   // 年が 1 つの記録は 1 本
+  assert.deepEqual(g.years[0].months[7], { steps: 6169, sleepMin: 438, score: 78, rhr: 57 });
+});
+
+test('yearMonthDefault: 平均の在る月のいちばん多い項目。同じ数なら歩数・睡眠時間・睡眠スコア・心拍の順', () => {
+  assert.deepEqual(C.yearMonthDefault(C.yearMonthAvg(yoyDays())), { item: 'sleepMin', months: 15 });
+  const same = daysOf('2026-01-01', 59, () => ({ score: 80, rhr: 55 }));
+  assert.deepEqual(C.yearMonthDefault(C.yearMonthAvg(same)), { item: 'score', months: 2 });
+  assert.deepEqual(C.yearMonthDefault(C.yearMonthAvg(daysOf('2026-01-01', 59, () => ({ rhr: 55, steps: 1 })))), { item: 'steps', months: 2 });
+  const one = C.yearMonthAvg(daysOf('2026-01-01', 20, () => ({ steps: 1 })));
+  assert.deepEqual(C.yearMonthDefault(one), { item: 'steps', months: 1 });   // 2 か月未満: 画面は図を出さない
+  assert.deepEqual(C.yearMonthAvg([]).years, []);
+  assert.deepEqual(C.yearMonthDefault(C.yearMonthAvg([])), { item: 'steps', months: 0 });
+  // 既定の年は記録の最後の年（画面は years の最後を選ぶ）
+  const g = C.yearMonthAvg(yoyDays());
+  assert.equal(g.years[g.years.length - 1].year, 2027);
+});
