@@ -128,6 +128,7 @@ details.card.opt[open] > summary { border-bottom: 1px solid var(--border); margi
 .content h3 { margin: var(--sp-4) 0 var(--sp-1); }
 .content p + p { margin-top: var(--sp-2); }
 .content ul, .content ol { padding-left: 1.3rem; margin: var(--sp-1) 0; }
+#sources { overflow-wrap: anywhere; }   /* 出典の名（armixlabs/FitbitToGarminConverter）が 320 幅で切れずにあふれる（Q-575） */
 .faq dt { font-weight: 700; margin-top: var(--sp-4); }
 .faq dt::before { content: 'Q. '; color: var(--accent); }
 .faq dd { color: var(--muted); padding: var(--sp-1) 0 var(--sp-2) 1.2rem; border-bottom: 1px solid var(--border); }
