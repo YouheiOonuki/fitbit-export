@@ -83,7 +83,7 @@ zip の読み方にライブラリ（fflate など）を使わなかった理由
 |---------|------|
 | `index.html` | ツール本体（ファイルを選ぶ → 結果とダウンロード → 出力の形・時刻と単位） |
 | `guide.html` | 使い方・書き出し方・読むファイルと時刻の扱い・よくある質問・注意・更新履歴 |
-| `zip.js` | zip の読み（中央ディレクトリ・ZIP64・deflate）と書き（無圧縮） |
+| `zip.js` | zip の読み（中央ディレクトリ・ZIP64・deflate）と書き（無圧縮）。正本は youheioonuki.github.io の `tools/common/zip.js` で、`tools/sync-common.mjs` が配った写し（ai-log と同じ 1 本。手で直さない） |
 | `calc.js` | 種類の判定・読み込み・日ごとのまとめ・CSV・Markdown・見本（架空） |
 | `constants.js` | 形式と手順の出典・確認日（`CHECKED`）。英語の文は `en` |
 | `text.js` | 画面の文（日本語・英語） |
