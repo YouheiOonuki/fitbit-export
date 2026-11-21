@@ -1,9 +1,9 @@
 // ===========================
-// zip の読み書き（依存なし）
+// zip の読み書き（依存なし）。正本は youheioonuki.github.io の tools/common/zip.js。ai-log・fitbit-export の zip.js は tools/sync-common.mjs が配った写しで、手で直さない（yorozu-plans D685）
 // - 読む: 末尾の中央ディレクトリだけを読み、要る項目だけを File.slice で取り出して
 //   ブラウザの DecompressionStream('deflate-raw') で展開する。2GB を超える zip（ZIP64）も読める。
-//   zip 全体をメモリに載せないので、心拍数の細かいファイルなど使わない中身は読まない
-// - 書く: Markdown の束を「無圧縮（stored）」の zip にする（展開の要らない小さな実装）
+//   zip 全体をメモリに載せないので、使わない中身（画像・音声など）は読まない
+// - 書く: Markdown の束を「無圧縮（stored）」の zip にする（展開の要らない小さな実装）。text の代わりに bytes（Uint8Array）も渡せる
 // ブラウザでは window.Zip、Node（テスト）では module.exports で使う。Node 18 以上なら Blob と DecompressionStream がある
 // ===========================
 (function (root) {
@@ -81,19 +81,26 @@
     });
   }
 
-  /** zip の 1 項目を文字列（UTF-8）で読む */
-  function readText(blob, entry) {
+  /**
+   * zip の 1 項目を、展開しながら少しずつ読むストリームにする（100MB を超える conversations.json を丸ごとメモリに載せないため）
+   * @returns {Promise<{stream: ReadableStream<Uint8Array>, compSize: number}>}
+   */
+  function readStream(blob, entry) {
     if (entry.encrypted) return Promise.reject(fail('encrypted', 'パスワード付きの zip は読めません'));
     return bytesOf(blob, entry.offset, entry.offset + 30).then(function (dv) {
       if (dv.getUint32(0, true) !== SIG_LOC) throw fail('badEntry', 'zip の中身が壊れています');
       var start = entry.offset + 30 + dv.getUint16(26, true) + dv.getUint16(28, true);
       var part = blob.slice(start, start + entry.compSize);
-      if (entry.method === 0) return part.text();
+      if (entry.method === 0) return { stream: part.stream(), compSize: entry.compSize };
       if (entry.method !== 8) throw fail('method', 'この圧縮方式（' + entry.method + '）は読めません', entry.method);
       if (typeof DecompressionStream === 'undefined') throw fail('noDecompress', 'このブラウザは zip の展開に対応していません。最新のブラウザでお試しください');
-      var stream = part.stream().pipeThrough(new DecompressionStream('deflate-raw'));
-      return new Response(stream).text();
+      return { stream: part.stream().pipeThrough(new DecompressionStream('deflate-raw')), compSize: entry.compSize };
     });
+  }
+
+  /** zip の 1 項目を文字列（UTF-8）で読む（小さいファイル用。テストでも使う） */
+  function readText(blob, entry) {
+    return readStream(blob, entry).then(function (r) { return new Response(r.stream).text(); });
   }
 
   // --- 書く（無圧縮） ---
@@ -113,7 +120,7 @@
   }
 
   /**
-   * ファイルの束を無圧縮の zip にする（ファイル名は UTF-8。4GB 未満・65535 件まで）
+   * ファイルの束を無圧縮の zip にする（ファイル名は UTF-8。4GB 未満。65,535 件を超えたら ZIP64 の目次）
    * @param {Array<{name:string, text:string}>} files
    * @param {Date} [date] 中の日時（既定は今）
    * @returns {Uint8Array}
@@ -125,7 +132,7 @@
     var dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
     var parts = [], central = [], offset = 0;
     files.forEach(function (f) {
-      var name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data);
+      var name = enc.encode(f.name), data = f.bytes || enc.encode(f.text), crc = crc32(data);
       var h = new DataView(new ArrayBuffer(30));
       h.setUint32(0, SIG_LOC, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
       h.setUint16(10, dosTime, true); h.setUint16(12, dosDate, true); h.setUint32(14, crc, true);
@@ -140,16 +147,28 @@
       offset += 30 + name.length + data.length;
     });
     var cdSize = central.reduce(function (s, a) { return s + a.length; }, 0);
+    var tail = [];
+    if (files.length > MAX16) {
+      // 65,535 件を超えたら ZIP64 の目次の終わり（EOCD64 と、その場所）を足す（会話が多い書き出し用）
+      var e64 = new DataView(new ArrayBuffer(56));
+      e64.setUint32(0, SIG_EOCD64, true); e64.setUint32(4, 44, true); e64.setUint16(12, 45, true); e64.setUint16(14, 45, true);
+      e64.setUint32(24, files.length, true); e64.setUint32(32, files.length, true); e64.setUint32(40, cdSize, true); e64.setUint32(48, offset, true);
+      var l64 = new DataView(new ArrayBuffer(20));
+      l64.setUint32(0, SIG_LOC64, true); l64.setUint32(8, offset + cdSize, true); l64.setUint32(16, 1, true);
+      tail.push(new Uint8Array(e64.buffer), new Uint8Array(l64.buffer));
+    }
+    var count16 = Math.min(files.length, MAX16);
     var e = new DataView(new ArrayBuffer(22));
-    e.setUint32(0, SIG_EOCD, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+    e.setUint32(0, SIG_EOCD, true); e.setUint16(8, count16, true); e.setUint16(10, count16, true);
     e.setUint32(12, cdSize, true); e.setUint32(16, offset, true);
-    var all = parts.concat(central, [new Uint8Array(e.buffer)]);
-    var out = new Uint8Array(offset + cdSize + 22), p = 0;
+    var all = parts.concat(central, tail, [new Uint8Array(e.buffer)]);
+    var tailSize = tail.reduce(function (s, a) { return s + a.length; }, 0);
+    var out = new Uint8Array(offset + cdSize + tailSize + 22), p = 0;
     all.forEach(function (a) { out.set(a, p); p += a.length; });
     return out;
   }
 
-  var api = { readIndex: readIndex, readText: readText, makeZip: makeZip, crc32: crc32 };
+  var api = { readIndex: readIndex, readStream: readStream, readText: readText, makeZip: makeZip, crc32: crc32 };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Zip = api;
 })(this);
